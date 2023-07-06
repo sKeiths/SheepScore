@@ -481,9 +481,8 @@ def newPlayer(edAText,combo, edAW):
     newPLabel = Label(newPW, text="Enter new player name:", padx=10, font=20).grid(row=0, column=0)
     newPEntry = Entry(newPW, font=20)
     newPEntry.grid(row=1, column=0)
-    newPOK = Button(newPW, text='OK', command=lambda: edPOK(edAText,combo, edAW, newPW, newPEntry.get())).grid(row=2,
-                                                                                                       column=3)
-    newPCancel = Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2, column=4)
+    newPOK = Button(newPW, text='OK', command=lambda: edPOK(edAText,combo, edAW, newPW, newPEntry.get())).grid(row=2,column=3)
+    newPCancel = Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2,column=4)
 def TextBoxUpdate(edAText,combo):
     global curP, current_var, players
     #print("old player was : "+players[curP].Name)
@@ -536,23 +535,16 @@ def edAnswers(window):
 
     edAText = Text(edAW)
     if len(players)==0:
-        edAText.insert(INSERT,
-                       'Click Load... to load players and answers\nfrom a PM text file, or click New Player\nto add players manually.')
+        edAText.insert(INSERT,'Click Load... to load players and answers\nfrom a PM text file, or click New Player\nto add players manually.')
     else:
         edAText.insert(INSERT,answers)
     edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
-    edALoad = Button(edAW, text="Load", padx=20, command=lambda: edQL(edAText)).grid(row=0, column=3, padx=10,
-                                                                                     pady=5)
-    edANP = Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText,combo, edAW)).grid(row=1,
-                                                                                                 column=3,
-                                                                                                 padx=10,
-                                                                                                 pady=5)
+    edALoad = Button(edAW, text="Load", padx=20, command=lambda: edQL(edAText)).grid(row=0,column=3,padx=10,pady=5)
+    edANP = Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText,combo, edAW)).grid(row=1,column=3,padx=10,pady=5)
     edACN = Button(edAW, text="Change Name", padx=0).grid(row=2, column=3, padx=10, pady=5)
     edADP = Button(edAW, text="Delete Player", padx=0).grid(row=3, column=3, padx=10, pady=5)
-    edASave = Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText)).grid(row=9, column=3,
-                                                                                             padx=10, pady=5)
-    edACancel = Button(edAW, text="Cancel", padx=20, command=lambda: edCancel(edAW)).grid(row=10, column=3,
-                                                                                          padx=10, pady=5)
+    edASave = Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText)).grid(row=9, column=3,padx=10, pady=5)
+    edACancel = Button(edAW, text="Cancel", padx=20, command=lambda: edCancel(edAW)).grid(row=10, column=3,padx=10, pady=5)
     edAW.rowconfigure(4, weight=1)
     edAW.columnconfigure(2, weight=1)
     return
@@ -560,11 +552,9 @@ def edAnswers(window):
 def edQuestions(window):
     window.withdraw()
     myfile = "\n".join(item.Text.lstrip() for item in sg.Questions)
-    print(myfile)
     edQW = Toplevel(window)
     edQW.title("Edit Questions")
-    edQLabel = Label(edQW,
-                     text="Click Load... to load the questions from a text file, or just type them in here one per line")
+    edQLabel = Label(edQW,text="Click Load... to load the questions from a text file, or just type them in here one per line")
     edQLabel.grid(row=0, columnspan=2)
     edQText = Text(edQW)
     edQText.insert(INSERT, myfile)
@@ -585,12 +575,11 @@ def outPlayerscore():
         else:
             print(i.score, end="")
     print("]")
+
 def dothis():
     print(sg.__dict__)
     print(sg.Questions[0].__dict__)
 
-    # for x in sg.Players[0].Answers:
-    #     print(x.Text)
 
 gt= {'Sheep':1,'PeehsDM':2, 'PeehsFB':3, 'PeehsHybrid':4, 'Heep':5, 'Heep15':6, 'Heep2':7, 'Kangaroo':8, 'Manual':9}
 gtl=['filler','Sheep','PeehsDM','PeehsFB','PeehsHybrid','Heep','Heep15','Heep2','Kangaroo','Manual']
@@ -624,9 +613,6 @@ window.config(menu=menubar)
 
 fileMenu=Menu(menubar,tearoff=0)
 menubar.add_cascade(label="File",menu=fileMenu)
-
-
-
 
 fileMenu.add_command(label="New Reveal", command=resetProgram)
 fileMenu.add_command(label="Load Reveal...", command=sg.loadReveal)
@@ -677,17 +663,11 @@ styleMenu.add_radiobutton(label="Forum Table",value=1, variable=Outputtype)
 styleMenu.add_radiobutton(label="Forum Formatted Text",value=2, variable=Outputtype)
 styleMenu.add_radiobutton(label="Unformatted Text",value=3, variable=Outputtype)
 
-
-
-
 qButton1 = Button(window, text="<",command=qdown).grid(row=0,column=1)
 qButton2 = Button(window, text=">",command=qup).grid(row=0,column=3)
 myLabel1 = Label(window, text="Q #", padx=5).grid(row=0,column=0)
 myLabel2 = Label(window, text="Click Sheep > Edit Questions... to begin.")
 myLabel2.grid(row=0,column=4)
-
-
-
 
 myTextbox1 = Entry(window,width=4 ,validate="key",
     validatecommand=(window.register(validate_entry), "%S"))
@@ -695,14 +675,8 @@ myTextbox1 = Entry(window,width=4 ,validate="key",
 myTextbox1.insert(INSERT,curQ)
 myTextbox1.grid(row=0,column=2)
 
-
 myTextbox2 = Text(window,state=DISABLED,padx=10,pady=5)
 myTextbox2.grid(row=1,column=0,columnspan=5)
 window.columnconfigure(4, weight=1)
 
-
-
-
 window.mainloop()
-
-
