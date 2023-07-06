@@ -314,8 +314,8 @@ class ShGame:
         resetProgram()
         #print (sg.__dict__)
         global myLabel2, Roundtype
-        filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
-        #filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+        #filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
+        filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
         tree = ET.parse(filename)
         root = tree.getroot()
         #print(root.tag)
