@@ -4,6 +4,24 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 
 
+class EdPlayer:
+    def __init__(self):
+        self.Name = ""
+        self.Answers = ""
+        self.OriginalPosition = -1
+        self.StartScore = 0
+        self.NewPlayerOriginalPosition = -1
+        self.EdIndex = 0
+        self.NeedsRegrouping = False
+
+    def __init__(self, newName, newAnswers, start_score=0, origPos=-1):
+        self.Name = newName
+        self.Answers = newAnswers
+        self.OriginalPosition = origPos
+        self.StartScore = start_score
+        self.NewPlayerOriginalPosition = -1
+        self.EdIndex = 0
+        self.NeedsRegrouping = False
 
 class ShGame:
     class ShQuestion:
@@ -209,11 +227,6 @@ class ShGame:
             for ans in self.Answers:
                 ans.Player.Answers.remove(ans)
 
-
-
-
-
-
     class ShAnswer:
         def __init__(self, ref_group, ref_player, new_text):
             self.Text = new_text
@@ -294,16 +307,15 @@ class ShGame:
                     new_answer = ShAnswer(new_group, self.Players[iplayer], new_answers[iques][iplayer])
                     new_group.Answers.append(new_answer)
                     self.Players[iplayer].Answers.append(new_answer)
-    def __str__():
+    def __str__(self):
         return 'This is a Game'
 
-
-
     def loadReveal(self):
+        resetProgram()
         #print (sg.__dict__)
         global myLabel2, Roundtype
-        # filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
-        filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+        filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
+        #filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
         tree = ET.parse(filename)
         root = tree.getroot()
         #print(root.tag)
@@ -397,7 +409,7 @@ def qup():
         myLabel2 = Label(window, text=sg.Questions[curQ-1].Text)
         myLabel2.grid(row=0, column=4)
 def resetProgram():
-    global myTextbox1, myLabel2,  myAnswers, players, curQ, current_var
+    global myTextbox1, myLabel2,  players, curQ, current_var
     sg.Questions = []
     sg.Players = []
     players=[]
@@ -445,11 +457,31 @@ def edSave(edQW,edQText):
     edQW.destroy()
 def edPSave(edAW,edAText):
     global players, score, myPlayers
-    sg.Players=[]
-    x=0
-    for item in players:
-        sg.Players.append(item)
-        x=x+1
+    if len(players)>0:
+        answers = edAText.get(1.0, END).splitlines()
+        if answers[-1].lstrip() == '':
+            del answers[-1]
+        index = 0
+        if len(answers) >= len(players[curP].Answers):
+            while index < len(players[curP].Answers):
+                if answers[index] != players[curP].Answers[index].Text:
+                    players[curP].Answers[index].Text = answers[index]
+                index += 1
+            while index < len(answers):
+                players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index, ""), players[curP], answers[index]))
+                index += 1
+        if len(answers) < len(players[curP].Answers):
+            while index < len(answers):
+                if answers[index] != players[curP].Answers[index].Text:
+                    players[curP].Answers[index].Text = answers[index]
+                index += 1
+            while index < len(players[curP].Answers):
+                del players[curP].Answers[index]
+        sg.Players=[]
+        x=0
+        for item in players:
+            sg.Players.append(item)
+            x=x+1
     window.deiconify()
     edAW.destroy()
 
@@ -489,8 +521,26 @@ def newPlayer(edAText,combo, edAW):
     newPCancel = Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2,column=4)
 def TextBoxUpdate(edAText,combo):
     global curP, current_var, players
-    #print("old player was : "+players[curP].Name)
-    #Do save answers here.
+    #Get current answers
+    answers=edAText.get(1.0, END).splitlines()
+    if answers[-1].lstrip()=='':
+        del answers[-1]
+    index=0
+    if len (answers) >= len (players[curP].Answers):
+        while index < len(players[curP].Answers):
+            if answers[index]!=players[curP].Answers[index].Text:
+                players[curP].Answers[index].Text=answers[index]
+            index+=1
+        while index < len(answers):
+            players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index,""),players[curP],answers[index]))
+            index+=1
+    if len(answers) < len(players[curP].Answers):
+        while index < len(answers):
+            if answers[index]!=players[curP].Answers[index].Text:
+                players[curP].Answers[index].Text=answers[index]
+            index+=1
+        while index < len(players[curP].Answers):
+            del players[curP].Answers[index]
     current_value = current_var.get()
     index=0
     for item in players:
@@ -508,6 +558,7 @@ def TextBoxUpdate(edAText,combo):
         edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
 
 def edAnswers(window):
+
     global players, curP, current_var
     players = []
     for item in sg.Players:
@@ -576,6 +627,7 @@ def outPlayerscore():
     print("]")
 
 def dothis():
+    print(sg)
     print(sg.__dict__)
     print(sg.Questions[0].__dict__)
 
