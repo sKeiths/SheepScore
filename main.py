@@ -270,26 +270,6 @@ class ShGame:
         Down = 2
         Nearest = 3
 
-
-
-        @property
-        def Count(self):
-            return self.counter
-
-        @property
-        def GameIndex(self):
-            return self._Game.Players.index(self)
-
-        @property
-        def Game(self):
-            return self._Game
-
-        def __del__(self):
-            for ans in self.Answers:
-                self.counter -= 1
-                ans.Group.Answers.remove(ans)
-
-
     def __init__(self,*args):
         if len(args)==0:
             self.Questions = []
