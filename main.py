@@ -144,6 +144,24 @@ class ShGame:
             self.Answers = []
             self.StartScore = start_score
             ShGame.ShPlayer.counter += 1
+
+        @property
+        def Count(self):
+            return self.counter
+
+        @property
+        def GameIndex(self):
+            return self._Game.Players.index(self)
+
+        @property
+        def Game(self):
+            return self._Game
+
+        def __del__(self):
+            for ans in self.Answers:
+                self.counter -= 1
+                ans.Group.Answers.remove(ans)
+
     class ShGroup:
         def __init__(self, ref_question, new_text):
             self.Text = new_text
@@ -190,6 +208,12 @@ class ShGame:
         def __del__(self):
             for ans in self.Answers:
                 ans.Player.Answers.remove(ans)
+
+
+
+
+
+
     class ShAnswer:
         def __init__(self, ref_group, ref_player, new_text):
             self.Text = new_text
@@ -493,7 +517,6 @@ def TextBoxUpdate(edAText,combo):
         if item.Name==current_value:
             curP=index
         else: index+=1
-    #Get answers for new slot
     if len(players) != 0:
         combo.current(curP)
         PAnswers=[]
@@ -507,16 +530,12 @@ def TextBoxUpdate(edAText,combo):
 def edAnswers(window):
     global players, curP, current_var
     players = []
-
     for item in sg.Players:
         players.append(item)
     curP = len(players)-1
-    #print([item.Name for item in players])
     window.withdraw()
-    #myfile = "\n".join(item.Name.lsplit() for item in sg.Answers)
     edAW = Toplevel(window)
     edAW.bind("<<ComboboxSelected>>", lambda x: TextBoxUpdate(edAText,combo))
-
     edAW.title("Edit Entries")
     edALabel = Label(edAW, text="Player:")
     edALabel.grid(row=0, column=0)
