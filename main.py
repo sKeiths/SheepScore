@@ -314,8 +314,8 @@ class ShGame:
         resetProgram()
         #print (sg.__dict__)
         global myLabel2, Roundtype
-        #filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
-        filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+        filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
+        #filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
         tree = ET.parse(filename)
         root = tree.getroot()
         #print(root.tag)
@@ -372,8 +372,10 @@ class ShGame:
                 myLabel2.grid(row=0, column=4)
             else:
                 qdown()
+            updateTreeview()
         else:
             messagebox.showinfo(title="Greetings", message="This is not a recognized sheep file!")
+
 
 def qdown():
     global curQ
@@ -391,6 +393,8 @@ def qdown():
         myLabel2.grid_forget()
         myLabel2 = Label(window, text=sg.Questions[curQ-1].Text)
         myLabel2.grid(row=0, column=4)
+    updateTreeview()
+
 def qup():
     global curQ
     global myLabel2
@@ -408,6 +412,7 @@ def qup():
         myLabel2.grid_forget()
         myLabel2 = Label(window, text=sg.Questions[curQ-1].Text)
         myLabel2.grid(row=0, column=4)
+    updateTreeview()
 def resetProgram():
     global myTextbox1, myLabel2,  players, curQ, current_var
     sg.Questions = []
@@ -434,8 +439,7 @@ def edQL(edQText):
     return(edQText)
 
 def edSave(edQW,edQText):
-    global myLabel2
-    global curQ
+    global myLabel2, curQ
     sg.Questions = []
     questions = edQText.get("1.0",END).splitlines()
     qindex=0
@@ -482,6 +486,8 @@ def edPSave(edAW,edAText):
         for item in players:
             sg.Players.append(item)
             x=x+1
+
+    updateTreeview()
     window.deiconify()
     edAW.destroy()
 
@@ -631,6 +637,35 @@ def dothis():
     print(sg.__dict__)
     print(sg.Questions[0].__dict__)
 
+def updateTreeview():
+    global myTreeview,curQ
+    if len(sg.Questions) != 0:
+        myTreeview.grid_forget()
+        myTreeview = ttk.Treeview(window, show="tree")
+        if (curQ > len(sg.Questions)):
+            curQ == len(sg.Questions)
+        if (curQ < 1):
+            curQ = 1
+        curQuestion = sg.Questions[curQ - 1]
+        # give instructions if no players loaded
+        if (len(sg.Players) == 0):
+            myTreeview.insert('', 'end', text="Click sheep >  Edit Entries... to add entries.", iid=0)
+            myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+        curgroup = 0
+        curItem = 0
+
+        #print(sg.Questions[0].Groups[0].__dict__)#.Answers[0].__dict__)
+        # loop through each group
+        for group in curQuestion.Groups:
+            group_node = myTreeview.insert("", "end", text=group.Text)
+            for answer in group.Answers:
+                myTreeview.insert(group_node, "end", text=answer.Text)
+        myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+        # text will be added later so don't bother with it in this function
+        # for grp in curQuestion:
+        #    curGroup=myTreeview.insert('','end',text=".",iid=0)
+
+    # myTreeview.insert('','end',text="this is text",iid=0)
 
 gt= {'Sheep':1,'PeehsDM':2, 'PeehsFB':3, 'PeehsHybrid':4, 'Heep':5, 'Heep15':6, 'Heep2':7, 'Kangaroo':8, 'Manual':9}
 gtl=['filler','Sheep','PeehsDM','PeehsFB','PeehsHybrid','Heep','Heep15','Heep2','Kangaroo','Manual']
@@ -717,6 +752,7 @@ styleMenu.add_radiobutton(label="Unformatted Text",value=3, variable=Outputtype)
 qButton1 = Button(window, text="<",command=qdown).grid(row=0,column=1)
 qButton2 = Button(window, text=">",command=qup).grid(row=0,column=3)
 myLabel1 = Label(window, text="Q #", padx=5).grid(row=0,column=0)
+
 myLabel2 = Label(window, text="Click Sheep > Edit Questions... to begin.")
 myLabel2.grid(row=0,column=4)
 
@@ -726,8 +762,15 @@ myTextbox1 = Entry(window,width=4 ,validate="key",
 myTextbox1.insert(INSERT,curQ)
 myTextbox1.grid(row=0,column=2)
 
-myTextbox2 = Text(window,state=DISABLED,padx=10,pady=5)
-myTextbox2.grid(row=1,column=0,columnspan=5)
+myTreeview = ttk.Treeview(window)
+myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+window.rowconfigure(1, weight=1)
 window.columnconfigure(4, weight=1)
+
+
+sg.loadReveal()
+
+
+
 
 window.mainloop()
