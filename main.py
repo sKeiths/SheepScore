@@ -657,9 +657,10 @@ def updateTreeview():
         #print(sg.Questions[0].Groups[0].__dict__)#.Answers[0].__dict__)
         # loop through each group
         for group in curQuestion.Groups:
-            group_node = myTreeview.insert("", "end", text=group.Text)
+            group_node = myTreeview.insert("", "end", text=group.Text + " - [" + str(len(group.Answers))+"]")
             for answer in group.Answers:
-                myTreeview.insert(group_node, "end", text=answer.Text)
+                myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
+
         myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
         # text will be added later so don't bother with it in this function
         # for grp in curQuestion:
@@ -769,8 +770,6 @@ window.columnconfigure(4, weight=1)
 
 
 sg.loadReveal()
-
-
 
 
 window.mainloop()
