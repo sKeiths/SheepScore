@@ -3,7 +3,6 @@ from tkinter import filedialog, messagebox, ttk
 import xml.etree.ElementTree as ET
 from enum import Enum
 
-
 class EdPlayer:
     def __init__(self):
         self.Name = ""
@@ -460,7 +459,16 @@ def edSave(edQW,edQText):
         myLabel2.grid(row=0, column=4)
     edQW.destroy()
 def edPSave(edAW,edAText):
-    global players, score, myPlayers
+    global players, score, myPlayers, curP
+    if len(players)>1:
+        who=players[curP].Name
+        players = sorted(players, key=lambda w: w.Name.lower())
+        index=0
+        for x in players:
+            if x.Name == who:
+                break
+            index += 1
+        curP = index
     if len(players)>0:
         answers = edAText.get(1.0, END).splitlines()
         if answers[-1].lstrip() == '':
@@ -502,6 +510,13 @@ def edCancel(child):
 def edPOK(edAText,combo, edAW, newPW, newplayer, x=''):
     global players, score, curP
     players.append(ShGame.ShPlayer(sg,newplayer,0))
+    players = sorted(players,key=lambda w: w.Name.lower())
+    index=0
+    for x in players:
+        if x.Name==newplayer:
+            break
+        index+=1
+    curP=index-1
     combo['values'] = [item.Name for item in players]
     curP+=1
     combo.current(curP)
@@ -516,6 +531,7 @@ def edPOK(edAText,combo, edAW, newPW, newplayer, x=''):
     newPW.destroy()
 
 def newPlayer(edAText,combo, edAW):
+    TextBoxUpdate(edAText,combo)
     edAW.withdraw()
     newPW = Toplevel(edAW)
     newPW.bind('<Return>', lambda x: edPOK(edAText,combo, edAW, newPW, newPEntry.get()))
@@ -528,48 +544,47 @@ def newPlayer(edAText,combo, edAW):
 def TextBoxUpdate(edAText,combo):
     global curP, current_var, players
     #Get current answers
-    answers=edAText.get(1.0, END).splitlines()
-    if answers[-1].lstrip()=='':
-        del answers[-1]
-    index=0
-    if len (answers) >= len (players[curP].Answers):
-        while index < len(players[curP].Answers):
-            if answers[index]!=players[curP].Answers[index].Text:
-                players[curP].Answers[index].Text=answers[index]
-            index+=1
-        while index < len(answers):
-            players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index,""),players[curP],answers[index]))
-            index+=1
-    if len(answers) < len(players[curP].Answers):
-        while index < len(answers):
-            if answers[index]!=players[curP].Answers[index].Text:
-                players[curP].Answers[index].Text=answers[index]
-            index+=1
-        while index < len(players[curP].Answers):
-            del players[curP].Answers[index]
-    current_value = current_var.get()
-    index=0
-    for item in players:
-        if item.Name==current_value:
-            curP=index
-        else: index+=1
-    if len(players) != 0:
-        combo.current(curP)
-        PAnswers=[]
-        answers = ""
-        for x in players[curP].Answers: PAnswers.append(x.Text)
-        for item in PAnswers: answers=answers+item+"\n"
-        edAText.delete(1.0, END)
-        edAText.insert(INSERT, answers)
-        edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+    if len(players)>0:
+        answers=edAText.get(1.0, END).splitlines()
+        if answers[-1].lstrip()=='':
+            del answers[-1]
+        index=0
+        if len (answers) >= len (players[curP].Answers):
+            while index < len(players[curP].Answers):
+                if answers[index]!=players[curP].Answers[index].Text:
+                    players[curP].Answers[index].Text=answers[index]
+                index+=1
+            while index < len(answers):
+                players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index,""),players[curP],answers[index]))
+                index+=1
+        if len(answers) < len(players[curP].Answers):
+            while index < len(answers):
+                if answers[index]!=players[curP].Answers[index].Text:
+                    players[curP].Answers[index].Text=answers[index]
+                index+=1
+            while index < len(players[curP].Answers):
+                del players[curP].Answers[index]
+        current_value = current_var.get()
+        index=0
+        for item in players:
+            if item.Name==current_value:
+                curP=index
+            else: index+=1
+        if len(players) != 0:
+            combo.current(curP)
+            PAnswers=[]
+            answers = ""
+            for x in players[curP].Answers: PAnswers.append(x.Text)
+            for item in PAnswers: answers=answers+item+"\n"
+            edAText.delete(1.0, END)
+            edAText.insert(INSERT, answers)
+            edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
 
 def edAnswers(window):
-
     global players, curP, current_var
     players = []
     for item in sg.Players:
         players.append(item)
-    curP = len(players)-1
     window.withdraw()
     edAW = Toplevel(window)
     edAW.bind("<<ComboboxSelected>>", lambda x: TextBoxUpdate(edAText,combo))
@@ -638,10 +653,14 @@ def dothis():
     print(sg.Questions[0].__dict__)
 
 def updateTreeview():
-    global myTreeview,curQ
+    global myTreeview,curQ,vsb
     if len(sg.Questions) != 0:
         myTreeview.grid_forget()
+        vsb.grid_forget()
         myTreeview = ttk.Treeview(window, show="tree")
+        vsb = ttk.Scrollbar(window,orient="vertical" ,command=myTreeview.yview)
+        myTreeview.configure(yscrollcommand=vsb.set)
+        vsb.grid(column=5, sticky='ns')
         if (curQ > len(sg.Questions)):
             curQ == len(sg.Questions)
         if (curQ < 1):
@@ -660,6 +679,7 @@ def updateTreeview():
             group_node = myTreeview.insert("", "end", text=group.Text + " - [" + str(len(group.Answers))+"]")
             for answer in group.Answers:
                 myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
+
 
         myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
         # text will be added later so don't bother with it in this function
@@ -765,11 +785,12 @@ myTextbox1.grid(row=0,column=2)
 
 myTreeview = ttk.Treeview(window)
 myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+vsb = ttk.Scrollbar(window,orient="vertical" ,command=myTreeview.yview)
 window.rowconfigure(1, weight=1)
 window.columnconfigure(4, weight=1)
 
 
-sg.loadReveal()
+#sg.loadReveal()
 
 
 window.mainloop()
