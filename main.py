@@ -313,8 +313,8 @@ class ShGame:
         resetProgram()
         #print (sg.__dict__)
         global myLabel2, Roundtype
-        filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
-        #filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+        #filename = "C:/Users/keith/Desktop/sheep/80s2023.sheep17"
+        filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
         tree = ET.parse(filename)
         root = tree.getroot()
         #print(root.tag)
@@ -530,6 +530,17 @@ def edPOK(edAText,combo, edAW, newPW, newplayer, x=''):
     edAW.deiconify()
     newPW.destroy()
 
+def edROK(edAText,combo, edAW, newPW, newplayer, x=''):
+    global players, score, curP
+    names=[]
+    for x in players: names.append(x.Name)
+    if newplayer not in names and newplayer !='':
+        players[curP].Name=newplayer
+    combo['values'] = [item.Name for item in players]
+    combo.current(curP)
+    edAW.deiconify()
+    newPW.destroy()
+
 def newPlayer(edAText,combo, edAW):
     TextBoxUpdate(edAText,combo)
     edAW.withdraw()
@@ -541,6 +552,52 @@ def newPlayer(edAText,combo, edAW):
     newPEntry.grid(row=1, column=0)
     newPOK = Button(newPW, text='OK', command=lambda: edPOK(edAText,combo, edAW, newPW, newPEntry.get())).grid(row=2,column=3)
     newPCancel = Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2,column=4)
+    newPEntry.focus_force()
+
+
+def renamePlayer(edAText, combo, edAW):
+    global players
+    if len(players) > 0:
+        TextBoxUpdate(edAText, combo)
+        edAW.withdraw()
+        newPW = Toplevel(edAW)
+        newPW.bind('<Return>', lambda x: edROK(edAText, combo, edAW, newPW, newPEntry.get()))
+        newPW.title("Rename Player")
+        newPLabel = Label(newPW, text="Rename the player:", padx=10, font=20).grid(row=0, column=0)
+        entry_text=StringVar()
+        newPEntry = Entry(newPW, font=20, textvariable=entry_text)
+        entry_text.set(combo.get())
+        newPEntry.grid(row=1, column=0)
+        newPOK = Button(newPW, text='OK', command=lambda: edROK(edAText, combo, edAW, newPW, newPEntry.get())).grid(row=2,                                                                                                        column=3)
+        newPCancel = Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2, column=4)
+        newPEntry.focus_force()
+
+def delPlayer(edAText,combo):
+    global players, curP
+    if len(players)>0:
+        names=[]
+        for x in players: names.append(x.Name)
+        index=names.index(combo.get())
+        players.pop(index)
+        if curP==len(players):
+            curP-=1
+        combo['values'] = [item.Name for item in players]
+        if len(players)==0:
+            combo.set('')
+            PAnswers = []
+            answers = ""
+            edAText.delete(1.0, END)
+            edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+        else:
+            combo.current(curP)
+            PAnswers = []
+            answers = ""
+            for x in players[curP].Answers: PAnswers.append(x.Text)
+            for item in PAnswers: answers = answers + item + "\n"
+            edAText.delete(1.0, END)
+            edAText.insert(INSERT, answers)
+            edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+
 def TextBoxUpdate(edAText,combo):
     global curP, current_var, players
     #Get current answers
@@ -612,8 +669,8 @@ def edAnswers(window):
     edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
     edALoad = Button(edAW, text="Load", padx=20, command=lambda: edQL(edAText)).grid(row=0,column=3,padx=10,pady=5)
     edANP = Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText,combo, edAW)).grid(row=1,column=3,padx=10,pady=5)
-    edACN = Button(edAW, text="Change Name", padx=0).grid(row=2, column=3, padx=10, pady=5)
-    edADP = Button(edAW, text="Delete Player", padx=0).grid(row=3, column=3, padx=10, pady=5)
+    edACN = Button(edAW, text="Change Name", padx=0,command=lambda: renamePlayer(edAText,combo, edAW)).grid(row=2, column=3, padx=10, pady=5)
+    edADP = Button(edAW, text="Delete Player", padx=0, command=lambda: delPlayer(edAText,combo)).grid(row=3, column=3, padx=10, pady=5)
     edASave = Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText)).grid(row=9, column=3,padx=10, pady=5)
     edACancel = Button(edAW, text="Cancel", padx=20, command=lambda: edCancel(edAW)).grid(row=10, column=3,padx=10, pady=5)
     edAW.rowconfigure(4, weight=1)
