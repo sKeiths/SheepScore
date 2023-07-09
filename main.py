@@ -2,6 +2,7 @@ from tkinter import *
 from tkinter import filedialog, messagebox, ttk
 import xml.etree.ElementTree as ET
 from enum import Enum
+import re
 
 class EdPlayer:
     def __init__(self):
@@ -25,12 +26,14 @@ class EdPlayer:
 class ShGame:
     class ShQuestion:
 
+
         def __init__(self, ref_game, new_text):
             self.Text = new_text
             self.Groups= []
             self._Game = ref_game
 
-
+        def __str__(self):
+            return f'Question: {self.Text} Groups: {self.Groups} ref_game: {self._Game}'
         @property
         def GameIndex(self):
             return self._Game.Questions.index(self)
@@ -161,7 +164,8 @@ class ShGame:
             self.Answers = []
             self.StartScore = start_score
             ShGame.ShPlayer.counter += 1
-
+        def __str__(self):
+            return f'Player: {self.Name} Answers: {self.Answers} '
         @property
         def Count(self):
             return self.counter
@@ -191,7 +195,8 @@ class ShGame:
             # declares with an empty list for Answers
             #self.Answers = [ShAnswer() for _ in range(len(ref_question.Game.Players))]
             #self.Answers = [ShGame.ShAnswer(len(ref_question.Game.Players)) for _ in range(len(ref_question.Game.Players))]
-
+        def __str__(self):
+            return f'Group.Text: {self.Text} ref_question: {self._Question} Answers: {self.Answers}'
         @property
         def Question(self):
             return self._Question
@@ -233,6 +238,8 @@ class ShGame:
             self._Group = ref_group
             self._Player = ref_player
 
+        def __str__(self):
+            return f'Answer.Text:{self.Text} ref_group: {self._Group} ref_player: {self._Player}'
         @property
         def Group(self):
             return self._Group
@@ -242,14 +249,20 @@ class ShGame:
             return self._Player
 
         def ChangeGroup(self, ref_group):
+            print(str(ref_group) +" "+str(self._Group))
             if ref_group == self._Group:
                 return
             if self._Group.Question != ref_group.Question:
                 raise Exception("Moving an answer to a group in a different question.")
             oldGroup = self._Group
             self._Group = ref_group
+            print(ref_group.Answers)
             ref_group.Answers.append(self)
-            oldGroup.Answers.remove(self)
+            print(oldGroup.Answers)
+            try:
+                oldGroup.Answers.remove(self)
+            except:
+                pass
             if len(oldGroup.Answers) == 0:
                 oldGroup.Question.Groups.remove(oldGroup)
         def StartNewGroup(self):
@@ -308,6 +321,30 @@ class ShGame:
                     self.Players[iplayer].Answers.append(new_answer)
     def __str__(self):
         return 'This is a Game'
+
+    # attempts to guess groupings for ans
+    def guess_group(self,ans):
+
+        anstxt = re.sub(r'\W', '', ans.Text.lower())
+
+        for grp in ans.Group.Question.Groups:
+            print(ans.Group.Question.Groups)
+            if grp == ans.Group:
+                continue
+
+            if re.sub(r'\W', '', grp.Text.lower()) == anstxt:
+                ans.ChangeGroup(grp)
+                return
+
+        # didn't find any but let's try individual answers
+        for grp in ans.Group.Question.Groups:
+            if grp == ans.Group:
+                continue
+
+            for ans2 in grp.Answers:
+                if re.sub(r'\W', '', ans2.Text.lower()) == anstxt:
+                    ans.ChangeGroup(grp)
+                    return
 
     def loadReveal(self):
         resetProgram()
@@ -416,6 +453,7 @@ def resetProgram():
     global myTextbox1, myLabel2,  players, curQ, current_var
     sg.Questions = []
     sg.Players = []
+    sg.Groups= []
     players=[]
     curQ = 1
     current_var.set("")
@@ -426,12 +464,79 @@ def resetProgram():
     myLabel2.grid_forget()
     myLabel2 = Label(window, text="Click Sheep > Edit Questions... to begin.")
     myLabel2.grid(row=0, column=4)
+    updateTreeview()
     return
 
+def edAL(edAText,combo):
+    global players
+    existing_players = []
+    for x in players: existing_players.append(x.Name)
+    #file1 = open("C:/Users/keith/Desktop/sheep/answers.txt", 'r')
+    file1 = open(filedialog.askopenfilename(title="Load Players and Answers from File", filetypes=[("txt files", "*.txt")]  ), 'r', encoding="utf8")
+    found = 0
+    next_player = 0
+    name = ""
+    answers = []
+    for line in file1:
+        line=line.strip()
+        if found==0 and line[0:6]=="From: ":
+            found=1
+
+            name=line[6:]
+
+        if found==2 and line=="------------------------------------------------------------------------":
+            found = 0
+            next_player=1
+        if found==2:
+            answers.append(line)
+
+        if found==1 and line=="------------------------------------------------------------------------":
+            found = 2
+        if next_player==1:
+            if name not in existing_players:
+                player=ShGame.ShPlayer(sg,name,0)
+                existing_players.append(name)
+                index = 0  # question 0
+                #print(name + " with answers= " + str(answers))
+                for ans in answers:
+                    try:
+                        newgroup = ShGame.ShGroup(sg.Questions[index], ans)
+                        sg.Questions[index].Groups.append(newgroup)
+                        player.Answers.append(ShGame.ShAnswer(newgroup, player, ans))
+                        index += 1
+                    except:
+                        print("missing questions?")
+                answers = []
+                players.append(player)
+                #print("appended")
+                next_player = 0
+            else:
+                print(name + "exists in "+str(existing_players))
+                #print(for a in sg.Players: print(a.Name))
+                #player=sg.Players.pop(existing_players.index(name))
+                print("Duplicate Player " + name)
+                answers = []
+                print("dumped duplicate")
+                next_player=0
+
+
+
+    players = sorted(players, key=lambda w: w.Name.lower())
+    curP = 0
+    combo['values'] = [item.Name for item in players]
+    combo.current(curP)
+    PAnswers = []
+    answers = ""
+    for x in players[curP].Answers: PAnswers.append(x)
+    for item in PAnswers: answers = answers + item.Text + "\n"
+    edAText.delete(1.0, END)
+    edAText.insert(INSERT, answers)
+    edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+    return(edAText)
+
 def edQL(edQText):
-    edQL.filename = filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  )
-    #print(edQL.filename) #debug code
-    file1 = open(edQL.filename, 'r')
+    file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
+    #file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
     strvar=file1.read()
     edQText.delete(1.0,END)
     edQText.insert(INSERT, strvar)
@@ -473,31 +578,38 @@ def edPSave(edAW,edAText):
         answers = edAText.get(1.0, END).splitlines()
         if answers[-1].lstrip() == '':
             del answers[-1]
-        index = 0
-        if len(answers) >= len(players[curP].Answers):
-            while index < len(players[curP].Answers):
-                if answers[index] != players[curP].Answers[index].Text:
-                    players[curP].Answers[index].Text = answers[index]
-                index += 1
-            while index < len(answers):
-                players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index, ""), players[curP], answers[index]))
-                index += 1
-        if len(answers) < len(players[curP].Answers):
-            while index < len(answers):
-                if answers[index] != players[curP].Answers[index].Text:
-                    players[curP].Answers[index].Text = answers[index]
-                index += 1
-            while index < len(players[curP].Answers):
-                del players[curP].Answers[index]
+
+        players[curP].Answers=[]
+        for index in range(len(answers)):
+            newgroup = ShGame.ShGroup(sg.Questions[index], answers[index])
+            sg.Questions[index].Groups.append(newgroup)
+            players[curP].Answers.append(ShGame.ShAnswer(newgroup, players[curP], answers[index]))
+
+
         sg.Players=[]
         x=0
         for item in players:
             sg.Players.append(item)
-            x=x+1
+            x+=1
+
+        #print(sg.Players[0])
+        for x in range(len(sg.Players)):
+            for ans in sg.Players[x].Answers:
+                #print(ans)
+                sg.guess_group(ans)
+
+    #     for y in range(len(sg.Questions)):
+    #         ans = sg.Players[x].Answers[y]
+    #         tempAnsTxt = "(blank)"
+    #         if ans.Text.strip() != "":
+    #             tempAnsTxt = ans.Text.strip()
+    #         ans.Text = tempAnsTxt
+
 
     updateTreeview()
     window.deiconify()
     edAW.destroy()
+
 
 def edPCancel(parent,child):
     parent.deiconify()
@@ -667,7 +779,7 @@ def edAnswers(window):
     else:
         edAText.insert(INSERT,answers)
     edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
-    edALoad = Button(edAW, text="Load", padx=20, command=lambda: edQL(edAText)).grid(row=0,column=3,padx=10,pady=5)
+    edALoad = Button(edAW, text="Load", padx=20, command=lambda: edAL(edAText,combo)).grid(row=0,column=3,padx=10,pady=5)
     edANP = Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText,combo, edAW)).grid(row=1,column=3,padx=10,pady=5)
     edACN = Button(edAW, text="Change Name", padx=0,command=lambda: renamePlayer(edAText,combo, edAW)).grid(row=2, column=3, padx=10, pady=5)
     edADP = Button(edAW, text="Delete Player", padx=0, command=lambda: delPlayer(edAText,combo)).grid(row=3, column=3, padx=10, pady=5)
@@ -705,10 +817,11 @@ def outPlayerscore():
     print("]")
 
 def dothis():
-    print(sg)
-    print(sg.__dict__)
-    print(sg.Questions[0].__dict__)
-
+    print("sg "+str(sg))
+    print("sg.dict"+str(sg.__dict__))
+    print("Questions[0]"+str(sg.Questions[0].__dict__))
+    print("Questions[0].Groups[0]" + str(sg.Questions[0].Groups[0].__dict__))
+    print("Players[0]" + str(sg.Players[0].__dict__))
 def updateTreeview():
     global myTreeview,curQ,vsb
     if len(sg.Questions) != 0:
@@ -738,6 +851,11 @@ def updateTreeview():
                 myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
 
 
+        myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+    else:
+        myTreeview.grid_forget()
+        vsb.grid_forget()
+        myTreeview.delete(*myTreeview.get_children())
         myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
         # text will be added later so don't bother with it in this function
         # for grp in curQuestion:
