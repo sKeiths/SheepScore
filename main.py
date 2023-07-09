@@ -535,8 +535,8 @@ def edAL(edAText,combo):
     return(edAText)
 
 def edQL(edQText):
-    file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
-    #file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
+    #file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
+    file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
     strvar=file1.read()
     edQText.delete(1.0,END)
     edQText.insert(INSERT, strvar)
