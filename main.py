@@ -249,16 +249,16 @@ class ShGame:
             return self._Player
 
         def ChangeGroup(self, ref_group):
-            print(str(ref_group) +" "+str(self._Group))
+            #print(str(ref_group) +" "+str(self._Group))
             if ref_group == self._Group:
                 return
             if self._Group.Question != ref_group.Question:
                 raise Exception("Moving an answer to a group in a different question.")
             oldGroup = self._Group
             self._Group = ref_group
-            print(ref_group.Answers)
+            #print(ref_group.Answers)
             ref_group.Answers.append(self)
-            print(oldGroup.Answers)
+            #print(oldGroup.Answers)
             try:
                 oldGroup.Answers.remove(self)
             except:
@@ -328,7 +328,7 @@ class ShGame:
         anstxt = re.sub(r'\W', '', ans.Text.lower())
 
         for grp in ans.Group.Question.Groups:
-            print(ans.Group.Question.Groups)
+            #print(ans.Group.Question.Groups)
             if grp == ans.Group:
                 continue
 
@@ -398,6 +398,8 @@ class ShGame:
                             tempansbonustype = item.attrib['BonusType']
                             anstext = item.text
                             newAns = ShGame.ShAnswer(newGroup, self.Players[ans_p_index], anstext)
+                            newAns.AnswerBonus = tempansbonus
+                            newAns.BonusType = tempansbonustype
                             newGroup.Answers.append(newAns)
                             self.Players[ans_p_index].Answers.append(newAns)
 
@@ -450,12 +452,13 @@ def qup():
         myLabel2.grid(row=0, column=4)
     updateTreeview()
 def resetProgram():
-    global myTextbox1, myLabel2,  players, curQ, current_var
+    global myTextbox1, myLabel2,  players, curQ, current_var, curP
     sg.Questions = []
     sg.Players = []
     sg.Groups= []
     players=[]
     curQ = 1
+    curP = 0
     current_var.set("")
     myTextbox1.delete(0, END)
     myTextbox1.insert(INSERT, curQ)
@@ -469,14 +472,15 @@ def resetProgram():
 
 def edAL(edAText,combo):
     global players
+    players=[]
     existing_players = []
+    answers = []
     for x in players: existing_players.append(x.Name)
-    #file1 = open("C:/Users/keith/Desktop/sheep/answers.txt", 'r')
-    file1 = open(filedialog.askopenfilename(title="Load Players and Answers from File", filetypes=[("txt files", "*.txt")]  ), 'r', encoding="utf8")
+    file1 = open("C:/Users/keith/Desktop/sheep/answers.txt", 'r', encoding="utf8")
+    #file1 = open(filedialog.askopenfilename(title="Load Players and Answers from File", filetypes=[("txt files", "*.txt")]  ), 'r', encoding="utf8")
     found = 0
     next_player = 0
     name = ""
-    answers = []
     for line in file1:
         line=line.strip()
         if found==0 and line[0:6]=="From: ":
@@ -499,13 +503,11 @@ def edAL(edAText,combo):
                 index = 0  # question 0
                 #print(name + " with answers= " + str(answers))
                 for ans in answers:
-                    try:
-                        newgroup = ShGame.ShGroup(sg.Questions[index], ans)
-                        sg.Questions[index].Groups.append(newgroup)
-                        player.Answers.append(ShGame.ShAnswer(newgroup, player, ans))
-                        index += 1
-                    except:
-                        print("missing questions?")
+                    while index == len(sg.Questions): sg.Questions.append(ShGame.ShQuestion(sg,""))
+                    newgroup = ShGame.ShGroup(sg.Questions[index], ans)
+                    sg.Questions[index].Groups.append(newgroup)
+                    player.Answers.append(ShGame.ShAnswer(newgroup, player, ans))
+                    index += 1
                 answers = []
                 players.append(player)
                 #print("appended")
@@ -535,8 +537,8 @@ def edAL(edAText,combo):
     return(edAText)
 
 def edQL(edQText):
-    #file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
-    file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
+    file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
+    #file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
     strvar=file1.read()
     edQText.delete(1.0,END)
     edQText.insert(INSERT, strvar)
@@ -563,8 +565,10 @@ def edSave(edQW,edQText):
         myLabel2 = Label(window, text=sg.Questions[curQ - 1].Text)
         myLabel2.grid(row=0, column=4)
     edQW.destroy()
-def edPSave(edAW,edAText):
+def edPSave(edAW,edAText,combo):
     global players, score, myPlayers, curP
+    if len(players)>0:
+        combo.event_generate('<<ComboboxSelected>>')
     if len(players)>1:
         who=players[curP].Name
         players = sorted(players, key=lambda w: w.Name.lower())
@@ -574,16 +578,13 @@ def edPSave(edAW,edAText):
                 break
             index += 1
         curP = index
-    if len(players)>0:
-        answers = edAText.get(1.0, END).splitlines()
-        if answers[-1].lstrip() == '':
-            del answers[-1]
 
-        players[curP].Answers=[]
-        for index in range(len(answers)):
-            newgroup = ShGame.ShGroup(sg.Questions[index], answers[index])
-            sg.Questions[index].Groups.append(newgroup)
-            players[curP].Answers.append(ShGame.ShAnswer(newgroup, players[curP], answers[index]))
+        #
+        # players[curP].Answers=[]
+        # for index in range(len(answers)):
+        #     newgroup = ShGame.ShGroup(sg.Questions[index], answers[index])
+        #     sg.Questions[index].Groups.append(newgroup)
+        #     players[curP].Answers.append(ShGame.ShAnswer(newgroup, players[curP], answers[index]))
 
 
         sg.Players=[]
@@ -751,6 +752,25 @@ def TextBoxUpdate(edAText,combo):
 
 def edAnswers(window):
     global players, curP, current_var
+
+    def select_next(event):
+        selection = combo.current()  # get the current selection
+        last = len(combo['values']) - 1  # index of last item
+        key = event.keysym  # get the key that was pressed
+        if key == 'Up':
+            try:
+                combo.current(selection - 1)  # set the combobox to the previous item
+                combo.event_generate('<<ComboboxSelected>>')
+            except TclError:  # end of list reached
+                pass #combo.current(last)  # wrap around to last item
+        elif key == 'Down':
+            try:
+                combo.current(selection + 1)  # set the combobox to the next item
+                combo.event_generate('<<ComboboxSelected>>')
+            except TclError:  # end of list reached
+                pass #combo.current(0)  # wrap around to first item
+        return 'break'  # tell tk to dispose of this event and don't show the menu!
+
     players = []
     for item in sg.Players:
         players.append(item)
@@ -767,7 +787,8 @@ def edAnswers(window):
         answers = ""
         for x in players[curP].Answers: PAnswers.append(x.Text)
         for item in PAnswers: answers=answers+item+"\n"
-
+    combo.bind('<Up>', select_next)  # up arrow
+    combo.bind('<Down>',select_next)  # down arrow
     combo.grid(row=0, column=1)
     spacer = Label(edAW).grid(row=0, column=2)
     edALabel = Label(edAW, text="Starting Score:", padx=10)
@@ -783,7 +804,7 @@ def edAnswers(window):
     edANP = Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText,combo, edAW)).grid(row=1,column=3,padx=10,pady=5)
     edACN = Button(edAW, text="Change Name", padx=0,command=lambda: renamePlayer(edAText,combo, edAW)).grid(row=2, column=3, padx=10, pady=5)
     edADP = Button(edAW, text="Delete Player", padx=0, command=lambda: delPlayer(edAText,combo)).grid(row=3, column=3, padx=10, pady=5)
-    edASave = Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText)).grid(row=9, column=3,padx=10, pady=5)
+    edASave = Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText,combo)).grid(row=9, column=3,padx=10, pady=5)
     edACancel = Button(edAW, text="Cancel", padx=20, command=lambda: edCancel(edAW)).grid(row=10, column=3,padx=10, pady=5)
     edAW.rowconfigure(4, weight=1)
     edAW.columnconfigure(2, weight=1)
