@@ -5,28 +5,12 @@ from enum import Enum
 import re
 
 class EdPlayer:
-    def __init__(self):
-        self.Name = ""
-        self.Answers = ""
-        self.OriginalPosition = -1
-        self.StartScore = 0
-        self.NewPlayerOriginalPosition = -1
-        self.EdIndex = 0
-        self.NeedsRegrouping = False
-
-    def __init__(self, newName, newAnswers, start_score=0, origPos=-1):
-        self.Name = newName
-        self.Answers = newAnswers
-        self.OriginalPosition = origPos
-        self.StartScore = start_score
-        self.NewPlayerOriginalPosition = -1
-        self.EdIndex = 0
-        self.NeedsRegrouping = False
+    def __init__(self,name):
+        self.Name = name
+        self.Answers = []
 
 class ShGame:
     class ShQuestion:
-
-
         def __init__(self, ref_game, new_text):
             self.Text = new_text
             self.Groups= []
@@ -43,7 +27,7 @@ class ShGame:
             return self._Game
 
         def StartNewGroup(self, new_text):
-            newGrp = ShGroup(self, new_text)
+            newGrp = ShGame.ShGroup(self, new_text)
             self.Groups.append(newGrp)
             return newGrp
 
@@ -181,7 +165,10 @@ class ShGame:
         def __del__(self):
             for ans in self.Answers:
                 self.counter -= 1
+                print(f'self.Answers: {self.Answers}')
+                print(f'ans: {ans}')
                 ans.Group.Answers.remove(ans)
+
 
     class ShGroup:
         def __init__(self, ref_question, new_text):
@@ -189,7 +176,7 @@ class ShGame:
             self.Correct = True
             self.GroupBonus = 0
             self.BonusType = NONE
-            self.Answers = []  # actual answers
+            self.Answers = []
             self._Question = ref_question  # reference to question
             # constructor
             # declares with an empty list for Answers
@@ -266,8 +253,11 @@ class ShGame:
             if len(oldGroup.Answers) == 0:
                 oldGroup.Question.Groups.remove(oldGroup)
         def StartNewGroup(self):
+
             oldGroup = self._Group
-            newGroup = ShGroup(_Group.Question, self.Text)
+            print(oldGroup)
+            newGroup = ShGame.ShGroup(self._Group.Question, self.Text)
+            print(newGroup)
             oldGroup.Question.Groups.append(newGroup)
             self._Group = newGroup
             newGroup.Answers.append(self)
@@ -324,11 +314,11 @@ class ShGame:
 
     # attempts to guess groupings for ans
     def guess_group(self,ans):
-
+        #red
         anstxt = re.sub(r'\W', '', ans.Text.lower())
 
         for grp in ans.Group.Question.Groups:
-            #print(ans.Group.Question.Groups)
+            print(ans.Group.Question.Groups)
             if grp == ans.Group:
                 continue
 
@@ -471,7 +461,7 @@ def resetProgram():
     return
 
 def edAL(edAText,combo):
-    global players
+    global players, curP
     players=[]
     existing_players = []
     answers = []
@@ -498,16 +488,12 @@ def edAL(edAText,combo):
             found = 2
         if next_player==1:
             if name not in existing_players:
-                player=ShGame.ShPlayer(sg,name,0)
+                player=EdPlayer(name)
                 existing_players.append(name)
                 index = 0  # question 0
                 #print(name + " with answers= " + str(answers))
                 for ans in answers:
-                    while index == len(sg.Questions): sg.Questions.append(ShGame.ShQuestion(sg,""))
-                    newgroup = ShGame.ShGroup(sg.Questions[index], ans)
-                    sg.Questions[index].Groups.append(newgroup)
-                    player.Answers.append(ShGame.ShAnswer(newgroup, player, ans))
-                    index += 1
+                      player.Answers.append(ans)
                 answers = []
                 players.append(player)
                 #print("appended")
@@ -524,13 +510,13 @@ def edAL(edAText,combo):
 
 
     players = sorted(players, key=lambda w: w.Name.lower())
-    curP = 0
+    #curP = len(players)-1
     combo['values'] = [item.Name for item in players]
     combo.current(curP)
     PAnswers = []
     answers = ""
     for x in players[curP].Answers: PAnswers.append(x)
-    for item in PAnswers: answers = answers + item.Text + "\n"
+    for item in PAnswers: answers = answers + item + "\n"
     edAText.delete(1.0, END)
     edAText.insert(INSERT, answers)
     edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
@@ -550,7 +536,7 @@ def edSave(edQW,edQText):
     questions = edQText.get("1.0",END).splitlines()
     qindex=0
     for item in questions:
-        sg.Questions.append(ShGame.ShQuestion(qindex,questions[qindex]))
+        sg.Questions.append(ShGame.ShQuestion(sg,item))
         qindex+=1
 
     window.deiconify()
@@ -567,9 +553,13 @@ def edSave(edQW,edQText):
     edQW.destroy()
 def edPSave(edAW,edAText,combo):
     global players, score, myPlayers, curP
+    if len(players)==0:
+        sg.Players = []
+        for x in range(len(sg.Questions)):
+             sg.Questions[x].Groups = []
+
     if len(players)>0:
-        combo.event_generate('<<ComboboxSelected>>')
-    if len(players)>1:
+        combo.event_generate('<<ComboboxSelected>>') #store values of currently selected player
         who=players[curP].Name
         players = sorted(players, key=lambda w: w.Name.lower())
         index=0
@@ -579,32 +569,60 @@ def edPSave(edAW,edAText,combo):
             index += 1
         curP = index
 
-        #
-        # players[curP].Answers=[]
-        # for index in range(len(answers)):
-        #     newgroup = ShGame.ShGroup(sg.Questions[index], answers[index])
-        #     sg.Questions[index].Groups.append(newgroup)
-        #     players[curP].Answers.append(ShGame.ShAnswer(newgroup, players[curP], answers[index]))
+        sg.Players = [] #Remake the Game players from the entries.
+        for qs in sg.Questions: #Trash all groups
+            qs.Groups=[]
+        for pnum, player in enumerate(players):
+            #do the stuff to make a player and answers.
+            sg.Players.append(ShGame.ShPlayer(sg, player.Name,0))
+            for qnum, anstxt in enumerate(player.Answers):
+                while qnum == len(sg.Questions):
+                    sg.Questions.append(ShGame.ShQuestion(sg,""))
+                newgroup = ShGame.ShGroup(sg.Questions[qnum], anstxt)
+                #sg.Questions[qnum].Groups.append(newgroup)
+                sg.Players[pnum].Answers.append(ShGame.ShAnswer(newgroup, sg.Players[pnum], anstxt))
+                #print(sg.Players)
+        players=[]
 
 
-        sg.Players=[]
-        x=0
-        for item in players:
-            sg.Players.append(item)
-            x+=1
 
-        #print(sg.Players[0])
-        for x in range(len(sg.Players)):
-            for ans in sg.Players[x].Answers:
-                #print(ans)
-                sg.guess_group(ans)
+        print(f'# players: {len(sg.Players)}')
+        todelete=[]
+        for x, player in enumerate(sg.Players):
+            for i, ans in enumerate(player.Answers):
+                present_groups=[]
+                for m in ans.Group.Question.Groups:
+                    present_groups.append(m.Text)
+                if ans.Text not in present_groups:
+                    ans.Group.Question.Groups.append(ShGame.ShGroup(ans.Group.Question,ans.Text))
+                    present_groups.append(ans.Text)
+                print(present_groups)
+                print(present_groups.index(ans.Text))
+                ans.Group.Question.Groups[present_groups.index(ans.Text)].Answers.append(ans)
 
-    #     for y in range(len(sg.Questions)):
-    #         ans = sg.Players[x].Answers[y]
-    #         tempAnsTxt = "(blank)"
-    #         if ans.Text.strip() != "":
-    #             tempAnsTxt = ans.Text.strip()
-    #         ans.Text = tempAnsTxt
+        for x, player in enumerate(sg.Players):
+            for i, ans in enumerate(player.Answers):
+                sg.Players[x].Answers.pop(i)
+
+        print(todelete)
+
+
+                     #ans.Group.Question.Groups.append(ans)   #to fix, should not be appending answers into groups.
+                     #sg.Players[x].Answers.pop(i)
+
+                 #print(ans, ans.Group.Question.Groups)
+
+                 #ans.StartNewGroup()
+                 #sg.guess_group(ans)
+
+
+        #    for y in range(len(sg.Questions)):
+        #        ans = sg.Players[x].Answers[y]
+        #        tempAnsTxt = "(blank)"
+        #        if ans.Text.strip() != "":
+        #            tempAnsTxt = ans.Text.strip()
+        #        ans.Text = tempAnsTxt
+
 
 
     updateTreeview()
@@ -721,8 +739,8 @@ def TextBoxUpdate(edAText,combo):
         index=0
         if len (answers) >= len (players[curP].Answers):
             while index < len(players[curP].Answers):
-                if answers[index]!=players[curP].Answers[index].Text:
-                    players[curP].Answers[index].Text=answers[index]
+                if answers[index]!=players[curP].Answers[index]:
+                    players[curP].Answers[index]=answers[index]
                 index+=1
             while index < len(answers):
                 players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index,""),players[curP],answers[index]))
@@ -744,8 +762,8 @@ def TextBoxUpdate(edAText,combo):
             combo.current(curP)
             PAnswers=[]
             answers = ""
-            for x in players[curP].Answers: PAnswers.append(x.Text)
-            for item in PAnswers: answers=answers+item+"\n"
+            for x in players[curP].Answers: PAnswers.append(x)
+            for item in PAnswers: answers=answers+str(item)+"\n"
             edAText.delete(1.0, END)
             edAText.insert(INSERT, answers)
             edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
@@ -771,25 +789,64 @@ def edAnswers(window):
                 pass #combo.current(0)  # wrap around to first item
         return 'break'  # tell tk to dispose of this event and don't show the menu!
 
-    players = []
-    for item in sg.Players:
-        players.append(item)
+
+
     window.withdraw()
     edAW = Toplevel(window)
     edAW.bind("<<ComboboxSelected>>", lambda x: TextBoxUpdate(edAText,combo))
-    edAW.title("Edit Entries")
-    edALabel = Label(edAW, text="Player:")
-    edALabel.grid(row=0, column=0)
-    combo = ttk.Combobox(edAW,textvariable=current_var, state="readonly", values=[item.Name for item in players])
-    if len(players) != 0:
-        combo.current(curP)
+
+    players=[]
+
+    if len(sg.Players) != 0:
+
+
+        playerlist=[]
+        # for index, item in enumerate(sg.Players):
+        #     for ans in item.Answers:
+        #         if ans.Player.Name not in playerlist:
+        #             players.append(EdPlayer(ans.Player.Name))
+        #             playerlist.append(ans.Player.Name)
+        #         players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
+        #         #print(ans.Text, " ", ans.Player.Name)
+        #         #print(ans)
+        for qnum, question in enumerate(sg.Questions):
+            for gnum, grp in enumerate(sg.Questions[qnum].Groups):
+                for ans in grp.Answers:
+                    if ans.Player.Name not in playerlist:
+                        players.append(ShGame.ShPlayer(sg, ans.Player.Name, 0))
+                        playerlist.append(ans.Player.Name)
+                    players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
+                    print(ans.Text," ",ans.Player.Name)
+
+
+    #print(players)
+    if curP >= len(players):
+        curP = len(players)
+    #print(f'curP {curP}')
+    answers=""
+    #print("here")
+    if curP==0:curP+=1
+    if len(players)==0:
+        answers='Click Load... to load players and answers\nfrom a PM text file, or click New Player\nto add players manually.'
+        curP=0
+
+
+    else:
         PAnswers=[]
-        answers = ""
-        for x in players[curP].Answers: PAnswers.append(x.Text)
+        for x in players[curP].Answers: PAnswers.append(x)
         for item in PAnswers: answers=answers+item+"\n"
+    combo = ttk.Combobox(edAW, textvariable=current_var, state="readonly", values=[item.Name for item in players])
+    if curP!=0:combo.current(curP)
     combo.bind('<Up>', select_next)  # up arrow
     combo.bind('<Down>',select_next)  # down arrow
     combo.grid(row=0, column=1)
+
+
+    edAW.title("Edit Entries")
+    edALabel = Label(edAW, text="Player:")
+    edALabel.grid(row=0, column=0)
+
+
     spacer = Label(edAW).grid(row=0, column=2)
     edALabel = Label(edAW, text="Starting Score:", padx=10)
     edALabel.grid(row=1, column=0)
@@ -867,8 +924,10 @@ def updateTreeview():
         #print(sg.Questions[0].Groups[0].__dict__)#.Answers[0].__dict__)
         # loop through each group
         for group in curQuestion.Groups:
-            group_node = myTreeview.insert("", "end", text=group.Text + " - [" + str(len(group.Answers))+"]")
+            print(f'Group: {group}')
+            group_node = myTreeview.insert("", "end", text=group.Text + " - [xx]")
             for answer in group.Answers:
+                print(f'answer: {answer}')
                 myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
 
 
