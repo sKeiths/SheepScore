@@ -466,8 +466,8 @@ def edAL(edAText,combo):
     existing_players = []
     answers = []
     for x in players: existing_players.append(x.Name)
-    file1 = open("C:/Users/keith/Desktop/sheep/answers.txt", 'r', encoding="utf8")
-    #file1 = open(filedialog.askopenfilename(title="Load Players and Answers from File", filetypes=[("txt files", "*.txt")]  ), 'r', encoding="utf8")
+    #file1 = open("C:/Users/keith/Desktop/sheep/answers.txt", 'r', encoding="utf8")
+    file1 = open(filedialog.askopenfilename(title="Load Players and Answers from File", filetypes=[("txt files", "*.txt")]  ), 'r', encoding="utf8")
     found = 0
     next_player = 0
     name = ""
@@ -523,8 +523,8 @@ def edAL(edAText,combo):
     return(edAText)
 
 def edQL(edQText):
-    file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
-    #file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
+    #file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
+    file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]  ), 'r')
     strvar=file1.read()
     edQText.delete(1.0,END)
     edQText.insert(INSERT, strvar)
