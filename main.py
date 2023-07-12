@@ -5,9 +5,49 @@ from enum import Enum
 import re
 
 class EdPlayer:
-    def __init__(self,name):
-        self.Name = name
-        self.Answers = []
+    def __init__(self,*args):
+        if len(args)==0:
+            self.Name = ""
+            self.Answers = []
+            self.OriginalPosition = NewPlayerOriginalPosition
+            self.StartScore = 0
+            self.NeedsRegrouping = FALSE
+        elif len(args) == 1:
+            newname=args[0]
+            newAnswers=[]
+            self.Name = newname
+            self.Answers = newAnswers
+            self.StartScore = 0
+            self.NeedsRegroupIng=FALSE
+            self.OriginalPosition = -1
+        elif len(args) == 2:
+            newname=args[0]
+            newAnswers=args[1]
+            self.Name = newname
+            self.Answers = newAnswers
+            self.StartScore = 0
+            self.NeedsRegroupIng=FALSE
+            self.OriginalPosition = -1
+        elif len(args) == 3:
+            newname=args[0]
+            newAnswers=args[1]
+            startscore=args[2]
+            self.Name = newname
+            self.Answers = newAnswers
+            self.StartScore = startscore
+            self.NeedsRegroupIng = FALSE
+            self.OriginalPosition = -1
+        elif len(args) == 4:
+            newname=args[0]
+            newAnswers=args[1]
+            startscore=args[2]
+            origpos=args[3]
+            self.Name = newname
+            self.Answers = newAnswers
+            self.StartScore = startscore
+            self.NeedsRegroupIng = FALSE
+            self.OriginalPosition = origpos
+
 
 class ShGame:
     class ShQuestion:
@@ -165,8 +205,6 @@ class ShGame:
         def __del__(self):
             for ans in self.Answers:
                 self.counter -= 1
-                print(f'self.Answers: {self.Answers}')
-                print(f'ans: {ans}')
                 ans.Group.Answers.remove(ans)
 
 
@@ -346,6 +384,13 @@ class ShGame:
         root = tree.getroot()
         #print(root.tag)
         if root.tag == "SheepScore2012Game":
+            list=[]
+            for child in root: #sanity check file need uniquie player names
+                if child.tag == "Player":
+                    list.append(child.text)
+                    if len(list)!=len(set(list)):
+                        messagebox.showinfo(title="File Load error", message="Duplicate name found in player list. All players require a unique player name, please fix the game file manually.")
+                        return -1
             for child in root:
                 if child.tag == "ScoringMethod":
                     self.Method = self.ShMethod[child.text]
@@ -391,7 +436,8 @@ class ShGame:
                             newAns.AnswerBonus = tempansbonus
                             newAns.BonusType = tempansbonustype
                             newGroup.Answers.append(newAns)
-                            self.Players[ans_p_index].Answers.append(newAns)
+                            #print(f"newgroup {self.Questions[group_q_index].Groups}")
+                            #self.Players[ans_p_index].Answers.append(newAns)
 
 
             if len(self.Questions) >= curQ:
@@ -402,7 +448,7 @@ class ShGame:
                 qdown()
             updateTreeview()
         else:
-            messagebox.showinfo(title="Greetings", message="This is not a recognized sheep file!")
+            messagebox.showinfo(title="File load error", message="This is not a recognized sheep file!")
 
 
 def qdown():
@@ -532,12 +578,15 @@ def edQL(edQText):
 
 def edSave(edQW,edQText):
     global myLabel2, curQ
-    sg.Questions = []
+    #sg.Questions = []
     questions = edQText.get("1.0",END).splitlines()
-    qindex=0
-    for item in questions:
-        sg.Questions.append(ShGame.ShQuestion(sg,item))
-        qindex+=1
+
+
+    for index, item in enumerate(questions):
+        while index == len(sg.Questions):
+            sg.Questions.append(ShGame.ShQuestion(sg,item))
+        sg.Questions[index].Text = item
+
 
     window.deiconify()
     if curQ==0:curQ=1
@@ -569,6 +618,8 @@ def edPSave(edAW,edAText,combo):
             index += 1
         curP = index
 
+
+
         sg.Players = [] #Remake the Game players from the entries.
         for qs in sg.Questions: #Trash all groups
             qs.Groups=[]
@@ -585,26 +636,26 @@ def edPSave(edAW,edAText,combo):
         players=[]
 
 
-
-        print(f'# players: {len(sg.Players)}')
+        #Moving Answers from Players into groups.
+        #print(f'# players: {len(sg.Players)}')
         todelete=[]
         for x, player in enumerate(sg.Players):
             for i, ans in enumerate(player.Answers):
                 present_groups=[]
                 for m in ans.Group.Question.Groups:
-                    present_groups.append(m.Text)
-                if ans.Text not in present_groups:
+                    present_groups.append(m.Text.lower())
+                if ans.Text.lower() not in present_groups:
                     ans.Group.Question.Groups.append(ShGame.ShGroup(ans.Group.Question,ans.Text))
-                    present_groups.append(ans.Text)
-                print(present_groups)
-                print(present_groups.index(ans.Text))
-                ans.Group.Question.Groups[present_groups.index(ans.Text)].Answers.append(ans)
+                    present_groups.append(ans.Text.lower())
+                #print(present_groups)
+                #print(present_groups.index(ans.Text))
+                ans.Group.Question.Groups[present_groups.index(ans.Text.lower())].Answers.append(ans)
 
         for x, player in enumerate(sg.Players):
             for i, ans in enumerate(player.Answers):
                 sg.Players[x].Answers.pop(i)
 
-        print(todelete)
+        #print(todelete)
 
 
                      #ans.Group.Question.Groups.append(ans)   #to fix, should not be appending answers into groups.
@@ -640,24 +691,28 @@ def edCancel(child):
 
 def edPOK(edAText,combo, edAW, newPW, newplayer, x=''):
     global players, score, curP
-    players.append(ShGame.ShPlayer(sg,newplayer,0))
-    players = sorted(players,key=lambda w: w.Name.lower())
-    index=0
-    for x in players:
-        if x.Name==newplayer:
-            break
-        index+=1
-    curP=index-1
-    combo['values'] = [item.Name for item in players]
-    curP+=1
-    combo.current(curP)
-    PAnswers = []
-    answers = ""
-    for x in players[curP].Answers: PAnswers.append(x.Text)
-    for item in PAnswers: answers = answers + item + "\n"
-    edAText.delete(1.0, END)
-    edAText.insert(INSERT, answers)
-    edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+    if newplayer!="":
+        names=[]
+        for x in players: names.append(x.Name)
+        if newplayer not in names and newplayer !='':
+            players.append(EdPlayer(newplayer.strip(),[],0,-1))
+        players = sorted(players,key=lambda w: w.Name.lower())
+        index=0
+        for x in players:
+            if x.Name==newplayer:
+                break
+            index+=1
+        curP=index
+        combo['values'] = [item.Name for item in players]
+        if curP > len(players) -1: curP=len(players)
+        combo.current(curP)
+        PAnswers = []
+        answers = ""
+        for x in players[curP].Answers: PAnswers.append(x)
+        for item in PAnswers: answers = answers + item + "\n"
+        edAText.delete(1.0, END)
+        edAText.insert(INSERT, answers)
+        edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
     edAW.deiconify()
     newPW.destroy()
 
@@ -666,7 +721,7 @@ def edROK(edAText,combo, edAW, newPW, newplayer, x=''):
     names=[]
     for x in players: names.append(x.Name)
     if newplayer not in names and newplayer !='':
-        players[curP].Name=newplayer
+        players[curP].Name=newplayer.strip()
     combo['values'] = [item.Name for item in players]
     combo.current(curP)
     edAW.deiconify()
@@ -723,7 +778,7 @@ def delPlayer(edAText,combo):
             combo.current(curP)
             PAnswers = []
             answers = ""
-            for x in players[curP].Answers: PAnswers.append(x.Text)
+            for x in players[curP].Answers: PAnswers.append(x)
             for item in PAnswers: answers = answers + item + "\n"
             edAText.delete(1.0, END)
             edAText.insert(INSERT, answers)
@@ -743,12 +798,12 @@ def TextBoxUpdate(edAText,combo):
                     players[curP].Answers[index]=answers[index]
                 index+=1
             while index < len(answers):
-                players[curP].Answers.append(ShGame.ShAnswer(ShGame.ShGroup(index,""),players[curP],answers[index]))
+                players[curP].Answers.append(answers[index])
                 index+=1
         if len(answers) < len(players[curP].Answers):
             while index < len(answers):
-                if answers[index]!=players[curP].Answers[index].Text:
-                    players[curP].Answers[index].Text=answers[index]
+                if answers[index]!=players[curP].Answers[index]:
+                    players[curP].Answers[index]=answers[index]
                 index+=1
             while index < len(players[curP].Answers):
                 del players[curP].Answers[index]
@@ -813,19 +868,20 @@ def edAnswers(window):
             for gnum, grp in enumerate(sg.Questions[qnum].Groups):
                 for ans in grp.Answers:
                     if ans.Player.Name not in playerlist:
-                        players.append(ShGame.ShPlayer(sg, ans.Player.Name, 0))
+                        players.append(EdPlayer(ans.Player.Name))
                         playerlist.append(ans.Player.Name)
                     players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
-                    print(ans.Text," ",ans.Player.Name)
+                   #(ans.Text," ",ans.Player.Name)
 
 
-    #print(players)
+    #print(len(players))
     if curP >= len(players):
-        curP = len(players)
+        curP = len(players)-1
     #print(f'curP {curP}')
     answers=""
     #print("here")
-    if curP==0:curP+=1
+
+    #if curP==0:curP+=1
     if len(players)==0:
         answers='Click Load... to load players and answers\nfrom a PM text file, or click New Player\nto add players manually.'
         curP=0
@@ -836,7 +892,7 @@ def edAnswers(window):
         for x in players[curP].Answers: PAnswers.append(x)
         for item in PAnswers: answers=answers+item+"\n"
     combo = ttk.Combobox(edAW, textvariable=current_var, state="readonly", values=[item.Name for item in players])
-    if curP!=0:combo.current(curP)
+    if len(players)!=0:combo.current(curP)
     combo.bind('<Up>', select_next)  # up arrow
     combo.bind('<Down>',select_next)  # down arrow
     combo.grid(row=0, column=1)
@@ -924,10 +980,10 @@ def updateTreeview():
         #print(sg.Questions[0].Groups[0].__dict__)#.Answers[0].__dict__)
         # loop through each group
         for group in curQuestion.Groups:
-            print(f'Group: {group}')
-            group_node = myTreeview.insert("", "end", text=group.Text + " - [xx]")
+            #print(f'Group: {group}')
+            group_node = myTreeview.insert("", "end", text=group.Text + f" -[{len(group.Answers)}]")
             for answer in group.Answers:
-                print(f'answer: {answer}')
+                #print(f'answer: {answer}')
                 myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
 
 
