@@ -411,7 +411,7 @@ class ShGame:
                     start_score = child.attrib['StartScore']
                     while len(self.Players) < pindex + 1:
                         self.Players.append(self.ShPlayer(self, "(blank)", start_score))
-                    self.Players[pindex].Name = child.text
+                    self.Players[pindex].Name = child.text.strip()
                 elif child.tag == "Group":
                     group_q_index = int(child.attrib['QuestionIndex'])
                     tempcorrect = child.attrib['Correct']
@@ -587,6 +587,10 @@ def edSave(edQW,edQText):
             sg.Questions.append(ShGame.ShQuestion(sg,item))
         sg.Questions[index].Text = item
 
+    while sg.Questions[len(sg.Questions)-1].Text.strip()=="":
+        sg.Questions.pop(len(sg.Questions)-1)
+        print("question popped")
+
 
     window.deiconify()
     if curQ==0:curQ=1
@@ -602,6 +606,9 @@ def edSave(edQW,edQText):
     edQW.destroy()
 def edPSave(edAW,edAText,combo):
     global players, score, myPlayers, curP
+    print(players)
+
+
     if len(players)==0:
         sg.Players = []
         for x in range(len(sg.Questions)):
@@ -611,6 +618,7 @@ def edPSave(edAW,edAText,combo):
         combo.event_generate('<<ComboboxSelected>>') #store values of currently selected player
         who=players[curP].Name
         players = sorted(players, key=lambda w: w.Name.lower())
+        sg.Players = sorted(sg.Players, key=lambda w: w.Name.lower())
         index=0
         for x in players:
             if x.Name == who:
@@ -619,26 +627,92 @@ def edPSave(edAW,edAText,combo):
         curP = index
 
 
+        dbplayernames=[] # sg name
+        if len(sg.Players)>0:
+            for player in sg.Players:
+                dbplayernames.append(player.Name)
+        print(dbplayernames)
+        playernames=[] #ed names
+        for player in players: playernames.append(player.Name)
+        print(playernames)
+        todeleteplayers=list(set(dbplayernames)-set(playernames))
+        print("to be deleted: ",todeleteplayers)
+        newplayers=[]
+        for player in players: #add the name missing from playernames
+            if player.Name not in dbplayernames:
+                sg.Players.append(ShGame.ShPlayer(sg, player.Name, 0))
+                newplayers.append(player.Name)
 
-        sg.Players = [] #Remake the Game players from the entries.
-        for qs in sg.Questions: #Trash all groups
-            qs.Groups=[]
+        for z in todeleteplayers: #Lets delete deleted players.
+            for x, player in enumerate(sg.Players):
+                if player.Name in todeleteplayers:
+                    sg.Players.pop(x)
+            for x, player in enumerate(players):
+                if player.Name in todeleteplayers:
+                    players.pop(x)
+
+            #sg.Players=[x for x in sg.Players if x.Name not in todeleteplayers]
+            #players=[x for x in players if x.Name not in todeleteplayers]
+        for x in sg.Players:
+            print(x.Name, end=", ")
+        print()       # if player.Name in todeleteplayers:
+                #    del player
+
+        for ply in todeleteplayers:
+            for q, Qs in enumerate(sg.Questions):
+                for g, Gs in enumerate(Qs.Groups):
+                    for a, As in enumerate(Gs.Answers):
+                        if As.Player.Name == ply:
+                            sg.Questions[q].Groups[g].Answers.pop(a)
+                        if len(sg.Questions[q].Groups[g].Answers) == 0:
+                            sg.Questions[q].Groups.pop(g)
+
+
+
+
+
+        #lists should be the same
+        players = sorted(players, key=lambda w: w.Name.lower())
+        sg.Players = sorted(sg.Players, key=lambda w: w.Name.lower())
+        dbplayernames = []
+        playernames = []
+        for player in sg.Players: dbplayernames.append(player.Name)
+        for player in players: playernames.append(player.Name)
+
+
+
+
         for pnum, player in enumerate(players):
-            #do the stuff to make a player and answers.
-            sg.Players.append(ShGame.ShPlayer(sg, player.Name,0))
             for qnum, anstxt in enumerate(player.Answers):
                 while qnum == len(sg.Questions):
                     sg.Questions.append(ShGame.ShQuestion(sg,""))
-                newgroup = ShGame.ShGroup(sg.Questions[qnum], anstxt)
+                if player.Name in newplayers:
+                    newgroup = ShGame.ShGroup(sg.Questions[qnum], anstxt)
+                    sg.Players[pnum].Answers.append(ShGame.ShAnswer(newgroup, sg.Players[pnum], anstxt))
+                for g, grp in enumerate(sg.Questions[qnum].Groups):
+                    if anstxt.lower == grp.Text.lower():
+                        for a, ans in enumerate(grp.Answers):
+                            if ans.Player.Name == player.Name:
+                                if ans.Text.lower != anstxt.lower:
+                                    sg.Questions[qnum].Group[g].Answers.pop(ans) #del ans
+                                    if len(grp.Answers) ==0:
+                                        sg.Questions[qnum].Group.pop(g) #del grp
+                                    newgroup = ShGame.ShGroup(sg.Questions[qnum], anstxt)
+                                    sg.Players[pnum].Answers.append(ShGame.ShAnswer(newgroup, sg.Players[pnum], anstxt))
+
+
+
+                #newgroup = ShGame.ShGroup(sg.Questions[qnum], anstxt)
                 #sg.Questions[qnum].Groups.append(newgroup)
-                sg.Players[pnum].Answers.append(ShGame.ShAnswer(newgroup, sg.Players[pnum], anstxt))
+                #sg.Players[newdbplayernames.index(player.Name)].Answers.append(ShGame.ShAnswer(newgroup, sg.Players[newdbplayernames.index(player.Name)], anstxt))
                 #print(sg.Players)
-        players=[]
+
+
 
 
         #Moving Answers from Players into groups.
         #print(f'# players: {len(sg.Players)}')
-        todelete=[]
+
         for x, player in enumerate(sg.Players):
             for i, ans in enumerate(player.Answers):
                 present_groups=[]
@@ -673,7 +747,15 @@ def edPSave(edAW,edAText,combo):
         #        if ans.Text.strip() != "":
         #            tempAnsTxt = ans.Text.strip()
         #        ans.Text = tempAnsTxt
-
+    # for q, Qs in enumerate(sg.Questions):
+    #     for g, Gs in enumerate(Qs.Groups):
+    #         for a, As in enumerate(Gs.Answers):
+    #             del sg.Questions[q].Groups[g].Answers[a]
+    #             # if As.Player.Name in todeleteplayers:
+    #             # del As
+    #             # sg.Questions[q].Groups[g].remove(a)
+    #             if len(sg.Questions[q].Groups[g].Answers) == 0:
+    #                 del sg.Questions[q].Groups[g]
 
 
     updateTreeview()
@@ -783,6 +865,7 @@ def delPlayer(edAText,combo):
             edAText.delete(1.0, END)
             edAText.insert(INSERT, answers)
             edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+    combo.event_generate('<<ComboboxSelected>>')
 
 def TextBoxUpdate(edAText,combo):
     global curP, current_var, players
@@ -792,7 +875,7 @@ def TextBoxUpdate(edAText,combo):
         if answers[-1].lstrip()=='':
             del answers[-1]
         index=0
-        if len (answers) >= len (players[curP].Answers):
+        if len(answers) >= len (players[curP].Answers):
             while index < len(players[curP].Answers):
                 if answers[index]!=players[curP].Answers[index]:
                     players[curP].Answers[index]=answers[index]
@@ -849,28 +932,26 @@ def edAnswers(window):
     window.withdraw()
     edAW = Toplevel(window)
     edAW.bind("<<ComboboxSelected>>", lambda x: TextBoxUpdate(edAText,combo))
-
-    players=[]
+    if len(players)==0:
+        players=[]
 
     if len(sg.Players) != 0:
 
-
         playerlist=[]
-        # for index, item in enumerate(sg.Players):
-        #     for ans in item.Answers:
-        #         if ans.Player.Name not in playerlist:
-        #             players.append(EdPlayer(ans.Player.Name))
-        #             playerlist.append(ans.Player.Name)
-        #         players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
-        #         #print(ans.Text, " ", ans.Player.Name)
-        #         #print(ans)
+        for x in players: playerlist.append(x.Name)
+
         for qnum, question in enumerate(sg.Questions):
             for gnum, grp in enumerate(sg.Questions[qnum].Groups):
-                for ans in grp.Answers:
+                for a, ans in enumerate(grp.Answers):
                     if ans.Player.Name not in playerlist:
                         players.append(EdPlayer(ans.Player.Name))
                         playerlist.append(ans.Player.Name)
-                    players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
+                    if (len(players[playerlist.index(ans.Player.Name)].Answers)) == qnum:
+                        players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
+
+
+
+                    #players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
                    #(ans.Text," ",ans.Player.Name)
 
 
@@ -981,7 +1062,7 @@ def updateTreeview():
         # loop through each group
         for group in curQuestion.Groups:
             #print(f'Group: {group}')
-            group_node = myTreeview.insert("", "end", text=group.Text + f" -[{len(group.Answers)}]")
+            group_node = myTreeview.insert("", "end", text=group.Text + f" - [{len(group.Answers)}]")
             for answer in group.Answers:
                 #print(f'answer: {answer}')
                 myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
