@@ -295,9 +295,9 @@ class ShGame:
         def StartNewGroup(self):
 
             oldGroup = self._Group
-            print(oldGroup)
+            #print(oldGroup)
             newGroup = ShGame.ShGroup(self._Group.Question, self.Text)
-            print(newGroup)
+            #print(newGroup)
             oldGroup.Question.Groups.append(newGroup)
             self._Group = newGroup
             newGroup.Answers.append(self)
@@ -358,7 +358,7 @@ class ShGame:
         anstxt = re.sub(r'\W', '', ans.Text.lower())
 
         for grp in ans.Group.Question.Groups:
-            print(ans.Group.Question.Groups)
+            #print(ans.Group.Question.Groups)
             if grp == ans.Group:
                 continue
 
@@ -445,7 +445,7 @@ class ShGame:
             if len(self.Questions) >= curQ:
                 myLabel2.grid_forget()
                 myLabel2 = Label(window, text=self.Questions[curQ - 1].Text)
-                myLabel2.grid(row=0, column=4)
+                myLabel2.grid(row=0, column=5)
             else:
                 qdown()
             updateTreeview()
@@ -510,7 +510,7 @@ def qdown():
     if len(sg.Questions) >= curQ:
         myLabel2.grid_forget()
         myLabel2 = Label(window, text=sg.Questions[curQ-1].Text)
-        myLabel2.grid(row=0, column=4)
+        myLabel2.grid(row=0, column=5)
     updateTreeview()
 
 def qup():
@@ -529,7 +529,7 @@ def qup():
     if len(sg.Questions) >= curQ:
         myLabel2.grid_forget()
         myLabel2 = Label(window, text=sg.Questions[curQ-1].Text)
-        myLabel2.grid(row=0, column=4)
+        myLabel2.grid(row=0, column=5)
     updateTreeview()
 def resetProgram():
     global myTextbox1, myLabel2,  players, curQ, current_var, curP
@@ -545,8 +545,9 @@ def resetProgram():
     myTextbox1.grid_forget()
     myTextbox1.grid(row=0, column=2)
     myLabel2.grid_forget()
+    myCheckbox1.grid(row=0, column=4)
     myLabel2 = Label(window, text="Click Sheep > Edit Questions... to begin.")
-    myLabel2.grid(row=0, column=4)
+    myLabel2.grid(row=0, column=5)
     updateTreeview()
     return
 
@@ -646,7 +647,7 @@ def edSave(edQW,edQText):
     if len(sg.Questions) >= curQ:
         myLabel2.grid_forget()
         myLabel2 = Label(window, text=sg.Questions[curQ - 1].Text)
-        myLabel2.grid(row=0, column=4)
+        myLabel2.grid(row=0, column=5)
     edQW.destroy()
 def edPSave(edAW,edAText,combo):
     global players, score, myPlayers, curP
@@ -697,8 +698,8 @@ def edPSave(edAW,edAText,combo):
 
             #sg.Players=[x for x in sg.Players if x.Name not in todeleteplayers]
             #players=[x for x in players if x.Name not in todeleteplayers]
-        for x in sg.Players:
-            print(x.Name, end=", ")
+        #for x in sg.Players:
+           #(x.Name, end=", ")
         #print()       # if player.Name in todeleteplayers:
                 #    del player
 
@@ -1091,22 +1092,23 @@ def bDown(event):
 def bUp(event):
     tv = event.widget
     if tv.identify_row(event.y) == "": return
-    print(tv.identify_row(event.y))
+    Tmoveto = tv.index(tv.identify_row(event.y))
+    #print(tv.identify_row(event.y))
     if tv.identify_row(event.y) not in tv.selection():
         moveto = myTreeview.item(tv.identify_row(event.y))
         fromANS = myTreeview.item(tv.selection())['values']
         fromGRP = myTreeview.item(tv.selection())['values']
         toGRP = moveto['values']
-        print("ans:",fromANS)
-        print("from:", fromGRP)
-        print("to:", toGRP)
+        #print("ans:",fromANS)
+        #print("from:", fromGRP)
+        #print("to:", toGRP)
         if toGRP!="":
             if fromGRP[0]==toGRP[0] and len(fromGRP)==3:
                 for i, q in enumerate(sg.Questions):
                     if int(i) == int(fromANS[0]):
                         myq=q
                 for g in myq.Groups:
-                    print(g.Text)
+                    #print(g.Text)
                     if g.Text == fromGRP[1]:
                         fog = g
                     if g.Text == toGRP[1]:
@@ -1117,21 +1119,25 @@ def bUp(event):
                         myans=asx
                         #print("here: $",asx._Player.Name, "$ $", fromANS[2],"$ ", tog, fog)
                         if asx._Player.Name==fromANS[2] and found!=1:
-                            print("found match")
+                            #print("found match")
                             found=1
                             tog.Answers.append(asx)
                             fog.Answers.remove(asx)
                             if len (fog.Answers) == 0:
                                 myq.Groups.remove(fog)
+                            # for s in tv.selection():
+                            #     tv.move(s, '', Tmoveto)
                             updateTreeview()
 
-
+def displayTreeview():
+    global myTreeview
+    myTreeview.grid(row=1, column=0, columnspan=6, sticky='NSEW', padx=10, pady=5)
 
 
 def updateTreeview():
     global myTreeview,curQ,vsb
     if len(sg.Questions) != 0:
-        print("TreeView Updated")
+        #print("TreeView Updated")
         myTreeview.grid_forget()
         myTreeview.delete(*myTreeview.get_children())
         if (curQ > len(sg.Questions)):
@@ -1142,7 +1148,7 @@ def updateTreeview():
         # give instructions if no players loaded
         if (len(sg.Players) == 0):
             myTreeview.insert('', 'end', text="Click sheep >  Edit Entries... to add entries.", iid=0)
-            myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+            displayTreeview()
         curgroup = 0
         curItem = 0
 
@@ -1150,19 +1156,19 @@ def updateTreeview():
         # loop through each group
         for group in curQuestion.Groups:
             #print(f'Group: {group}')
-            group_node = myTreeview.insert("", "end", open=1, tags="group", value=[sg.Questions.index(curQuestion),group.Text],text=group.Text + f" - [{len(group.Answers)}]")
+            group_node = myTreeview.insert("", "end", open=cbvar1.get(), tags="group", value=[sg.Questions.index(curQuestion),group.Text],text=group.Text + f" - [{len(group.Answers)}]")
             for answer in group.Answers:
                 #print(f'answer: {answer}')
                 myTreeview.insert(group_node, "end", tags="answer", value=[sg.Questions.index(curQuestion),group.Text,answer.Player.Name],text=answer.Text + " - " + answer.Player.Name)
 
 
-        myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+        displayTreeview()
 
     else:
         myTreeview.grid_forget()
         vsb.grid_forget()
         myTreeview.delete(*myTreeview.get_children())
-        myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+        displayTreeview()
         # text will be added later so don't bother with it in this function
         # for grp in curQuestion:
         #    curGroup=myTreeview.insert('','end',text=".",iid=0)
@@ -1219,7 +1225,7 @@ Roundtype = IntVar()
 Roundtype.set(0)
 current_var = StringVar()
 menubar = Menu(window)
-
+cbvar1 = IntVar()
 window.config(menu=menubar)
 
 fileMenu=Menu(menubar,tearoff=0)
@@ -1278,8 +1284,10 @@ qButton1 = Button(window, text="<",command=qdown).grid(row=0,column=1)
 qButton2 = Button(window, text=">",command=qup).grid(row=0,column=3)
 myLabel1 = Label(window, text="Q #", padx=5).grid(row=0,column=0)
 
+myCheckbox1 = Checkbutton(window, text='show colapsed', variable=cbvar1, onvalue=0, offvalue=1, command=updateTreeview)
+myCheckbox1.grid(row=0,column=4)
 myLabel2 = Label(window, text="Click Sheep > Edit Questions... to begin.")
-myLabel2.grid(row=0,column=4)
+myLabel2.grid(row=0,column=5)
 
 myTextbox1 = Entry(window,width=4 ,validate="key",
     validatecommand=(window.register(validate_entry), "%S"))
@@ -1291,7 +1299,7 @@ myTextbox1.grid(row=0,column=2)
 myTreeview = ttk.Treeview(window, show="tree")
 vsb = ttk.Scrollbar(window, orient="vertical", command=myTreeview.yview)
 myTreeview.configure(yscrollcommand=vsb.set)
-vsb.grid(column=5, sticky='ns')
+vsb.grid(column=6, sticky='ns')
 myTreeview.popup = Menu(window, tearoff=0)
 myTreeview.popup.add_command(label="Set Group Name...")  # , command=next) etc...
 myTreeview.popup.add_command(label="Mark invalid")
@@ -1303,10 +1311,10 @@ myTreeview.popup2.add_command(label="Player Score...")  # , command=lambda: self
 myTreeview.bind("<Button-3>", do_popup)
 myTreeview.bind("<ButtonPress-1>", bDown)
 myTreeview.bind("<ButtonRelease-1>", bUp, add='+')
-myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+displayTreeview()
 vsb = ttk.Scrollbar(window,orient="vertical" ,command=myTreeview.yview)
 window.rowconfigure(1, weight=1)
-window.columnconfigure(4, weight=1)
+window.columnconfigure(5, weight=1)
 
 
 #sg.loadReveal()
