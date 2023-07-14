@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk
 import xml.etree.ElementTree as ET
 from enum import Enum
 import re
+import ctypes
 
 class EdPlayer:
     def __init__(self,*args):
@@ -260,6 +261,7 @@ class ShGame:
         def __init__(self, ref_group, ref_player, new_text):
             self.Text = new_text
             self.AnswerBonus = 0
+            self.BonusType = None
             self._Group = ref_group
             self._Player = ref_player
 
@@ -450,6 +452,48 @@ class ShGame:
         else:
             messagebox.showinfo(title="File load error", message="This is not a recognized sheep file!")
 
+    def saveReveal(self):
+        filename = filedialog.asksaveasfilename(title="Save Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+
+        sheep_score_game = ET.Element('SheepScore2012Game')
+        scoring_method = ET.SubElement(sheep_score_game, "ScoringMethod")
+        scoring_method.text = str(self.Method.name)
+
+        rounding = ET.SubElement(sheep_score_game, "Rounding")
+        rounding.text = str(self.Rounding.name)
+
+        for que in self.Questions:
+            question = ET.SubElement(sheep_score_game, "Question")
+            question.set("GameIndex", str(que.GameIndex))
+            question.text = que.Text
+
+        for plr in self.Players:
+            player = ET.SubElement(sheep_score_game, "Player")
+            player.set("GameIndex", str(plr.GameIndex))
+            player.set("StartScore", str(plr.StartScore))
+            player.text = plr.Name
+
+        for que in self.Questions:
+            for grp in que.Groups:
+                group = ET.SubElement(sheep_score_game, "Group")
+                group.set("QuestionIndex", str(que.GameIndex))
+                group.set("GroupBonus", str(grp.GroupBonus))
+                group.set("BonusType", str(grp.BonusType))
+                group.set("Correct", str(grp.Correct))
+                group2 = ET.SubElement(group , "Text")
+                group2.text = grp.Text
+
+                for ans in grp.Answers:
+                    answer = ET.SubElement(group, "Answer")
+                    answer.set("AnswerBonus", str(ans.AnswerBonus))
+                    answer.set("BonusType", str(ans.BonusType))
+                    answer.set("PlayerIndex", str(ans.Player.GameIndex))
+                    answer.text = ans.Text
+
+        tree = ET.ElementTree(sheep_score_game)
+        ET.indent(tree, '  ')
+        tree.write(filename, encoding ='utf-8', xml_declaration = True)
+
 
 def qdown():
     global curQ
@@ -606,7 +650,7 @@ def edSave(edQW,edQText):
     edQW.destroy()
 def edPSave(edAW,edAText,combo):
     global players, score, myPlayers, curP
-    print(players)
+    #print(players)
 
 
     if len(players)==0:
@@ -631,12 +675,12 @@ def edPSave(edAW,edAText,combo):
         if len(sg.Players)>0:
             for player in sg.Players:
                 dbplayernames.append(player.Name)
-        print(dbplayernames)
+        #print(dbplayernames)
         playernames=[] #ed names
         for player in players: playernames.append(player.Name)
-        print(playernames)
+        #print(playernames)
         todeleteplayers=list(set(dbplayernames)-set(playernames))
-        print("to be deleted: ",todeleteplayers)
+        #print("to be deleted: ",todeleteplayers)
         newplayers=[]
         for player in players: #add the name missing from playernames
             if player.Name not in dbplayernames:
@@ -655,7 +699,7 @@ def edPSave(edAW,edAText,combo):
             #players=[x for x in players if x.Name not in todeleteplayers]
         for x in sg.Players:
             print(x.Name, end=", ")
-        print()       # if player.Name in todeleteplayers:
+        #print()       # if player.Name in todeleteplayers:
                 #    del player
 
         for ply in todeleteplayers:
@@ -1037,15 +1081,59 @@ def dothis():
     print("Questions[0]"+str(sg.Questions[0].__dict__))
     print("Questions[0].Groups[0]" + str(sg.Questions[0].Groups[0].__dict__))
     print("Players[0]" + str(sg.Players[0].__dict__))
+
+
+def bDown(event):
+    tv = event.widget
+    if tv.identify_row(event.y) not in tv.selection():
+        tv.selection_set(tv.identify_row(event.y))
+
+def bUp(event):
+    tv = event.widget
+    if tv.identify_row(event.y) == "": return
+    print(tv.identify_row(event.y))
+    if tv.identify_row(event.y) not in tv.selection():
+        moveto = myTreeview.item(tv.identify_row(event.y))
+        fromANS = myTreeview.item(tv.selection())['values']
+        fromGRP = myTreeview.item(tv.selection())['values']
+        toGRP = moveto['values']
+        print("ans:",fromANS)
+        print("from:", fromGRP)
+        print("to:", toGRP)
+        if toGRP!="":
+            if fromGRP[0]==toGRP[0] and len(fromGRP)==3:
+                for i, q in enumerate(sg.Questions):
+                    if int(i) == int(fromANS[0]):
+                        myq=q
+                for g in myq.Groups:
+                    print(g.Text)
+                    if g.Text == fromGRP[1]:
+                        fog = g
+                    if g.Text == toGRP[1]:
+                        tog = g
+                found=0
+                for g in myq.Groups:
+                    for asx in g.Answers:
+                        myans=asx
+                        #print("here: $",asx._Player.Name, "$ $", fromANS[2],"$ ", tog, fog)
+                        if asx._Player.Name==fromANS[2] and found!=1:
+                            print("found match")
+                            found=1
+                            tog.Answers.append(asx)
+                            fog.Answers.remove(asx)
+                            if len (fog.Answers) == 0:
+                                myq.Groups.remove(fog)
+                            updateTreeview()
+
+
+
+
 def updateTreeview():
     global myTreeview,curQ,vsb
     if len(sg.Questions) != 0:
+        print("TreeView Updated")
         myTreeview.grid_forget()
-        vsb.grid_forget()
-        myTreeview = ttk.Treeview(window, show="tree")
-        vsb = ttk.Scrollbar(window,orient="vertical" ,command=myTreeview.yview)
-        myTreeview.configure(yscrollcommand=vsb.set)
-        vsb.grid(column=5, sticky='ns')
+        myTreeview.delete(*myTreeview.get_children())
         if (curQ > len(sg.Questions)):
             curQ == len(sg.Questions)
         if (curQ < 1):
@@ -1062,13 +1150,14 @@ def updateTreeview():
         # loop through each group
         for group in curQuestion.Groups:
             #print(f'Group: {group}')
-            group_node = myTreeview.insert("", "end", text=group.Text + f" - [{len(group.Answers)}]")
+            group_node = myTreeview.insert("", "end", open=1, tags="group", value=[sg.Questions.index(curQuestion),group.Text],text=group.Text + f" - [{len(group.Answers)}]")
             for answer in group.Answers:
                 #print(f'answer: {answer}')
-                myTreeview.insert(group_node, "end", text=answer.Text + " - " + answer.Player.Name)
+                myTreeview.insert(group_node, "end", tags="answer", value=[sg.Questions.index(curQuestion),group.Text,answer.Player.Name],text=answer.Text + " - " + answer.Player.Name)
 
 
         myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
+
     else:
         myTreeview.grid_forget()
         vsb.grid_forget()
@@ -1078,7 +1167,30 @@ def updateTreeview():
         # for grp in curQuestion:
         #    curGroup=myTreeview.insert('','end',text=".",iid=0)
 
-    # myTreeview.insert('','end',text="this is text",iid=0)
+        # myTreeview.insert('','end',text="this is text",iid=0)
+
+def do_popup(event):
+    tv = event.widget
+    item = tv.identify_row(event.y)
+    if tv.identify_row(event.y) not in tv.selection():
+        tv.selection_set(tv.identify_row(event.y))
+    if item == "":
+        return
+        #print(myTreeview.item(item))
+    elif myTreeview.item(item)["tags"][0]=="group":
+         try:
+             tv.popup.tk_popup(event.x_root, event.y_root, 0)
+         finally:
+             tv.popup.grab_release()
+    elif myTreeview.item(item)["tags"][0]=="answer":
+         try:
+             tv.popup2.tk_popup(event.x_root, event.y_root, 0)
+         finally:
+             tv.popup2.grab_release()
+
+
+
+
 
 gt= {'Sheep':1,'PeehsDM':2, 'PeehsFB':3, 'PeehsHybrid':4, 'Heep':5, 'Heep15':6, 'Heep2':7, 'Kangaroo':8, 'Manual':9}
 gtl=['filler','Sheep','PeehsDM','PeehsFB','PeehsHybrid','Heep','Heep15','Heep2','Kangaroo','Manual']
@@ -1115,7 +1227,7 @@ menubar.add_cascade(label="File",menu=fileMenu)
 
 fileMenu.add_command(label="New Reveal", command=resetProgram)
 fileMenu.add_command(label="Load Reveal...", command=sg.loadReveal)
-fileMenu.add_command(label="Save Reveal...")
+fileMenu.add_command(label="Save Reveal...", command=sg.saveReveal)
 fileMenu.add_command(label="Debug", command=dothis)
 fileMenu.add_separator()
 fileMenu.add_command(label="Exit",command=quit)
@@ -1175,7 +1287,22 @@ myTextbox1 = Entry(window,width=4 ,validate="key",
 myTextbox1.insert(INSERT,curQ)
 myTextbox1.grid(row=0,column=2)
 
-myTreeview = ttk.Treeview(window)
+
+myTreeview = ttk.Treeview(window, show="tree")
+vsb = ttk.Scrollbar(window, orient="vertical", command=myTreeview.yview)
+myTreeview.configure(yscrollcommand=vsb.set)
+vsb.grid(column=5, sticky='ns')
+myTreeview.popup = Menu(window, tearoff=0)
+myTreeview.popup.add_command(label="Set Group Name...")  # , command=next) etc...
+myTreeview.popup.add_command(label="Mark invalid")
+myTreeview.popup.add_command(label="Group Score")  # , command=lambda: self.closeWindow())
+myTreeview.popup2 = Menu(window, tearoff=0)
+myTreeview.popup2.add_command(label="Use as Group Name")  # , command=next) etc...
+myTreeview.popup2.add_command(label="Move to new group")
+myTreeview.popup2.add_command(label="Player Score...")  # , command=lambda: self.closeWindow()
+myTreeview.bind("<Button-3>", do_popup)
+myTreeview.bind("<ButtonPress-1>", bDown)
+myTreeview.bind("<ButtonRelease-1>", bUp, add='+')
 myTreeview.grid(row=1, column=0, columnspan=5, sticky='NSEW', padx=10, pady=5)
 vsb = ttk.Scrollbar(window,orient="vertical" ,command=myTreeview.yview)
 window.rowconfigure(1, weight=1)
