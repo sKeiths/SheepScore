@@ -501,8 +501,12 @@ def qset(event):
     global curQ
     var = StringVar
     var = myTextbox1.get()
-    curQ=int(var)-1
-    qup()
+    if int(var)>0:
+        curQ=int(var)-1
+        qup()
+    else:
+        curQ=2
+        qdown()
 
 def qdown():
     global curQ
