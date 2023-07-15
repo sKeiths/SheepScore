@@ -3,8 +3,10 @@ from tkinter import filedialog, messagebox, ttk
 import xml.etree.ElementTree as ET
 from enum import Enum
 import re
+import sys
 
-
+def quit():
+    sys.exit()
 class EdPlayer:
     def __init__(self,*args):
         if len(args)==0:
@@ -367,10 +369,13 @@ class ShGame:
                     return
 
     def loadReveal(self):
-        resetProgram()
+
         global myLabel2, Roundtype
+        filename=""
         #filename = "C:/Users/keith/Desktop/sheep/test.sheep17"
         filename = filedialog.askopenfilename(title="Load Sheep Scoring File", filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+        if filename == "" : return
+        resetProgram()
         tree = ET.parse(filename)
         root = tree.getroot()
         if root.tag == "SheepScore2012Game":
