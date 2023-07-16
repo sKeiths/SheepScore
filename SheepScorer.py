@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 from enum import Enum
 import re
 import sys
+import math
 
 
 def quit():
@@ -89,106 +90,116 @@ class ShGame:
                 all_answers.extend(grp.Answers)
             return all_answers
 
-            # returns list of scores for this question
-            # SCORING METHODS
-            # Sheep:    each player gets total answers in his group as his score
-            # Peehs1:   incorrects = 1.5 * highest correct score
-            # Peehs2:   incorrects = highest correct score + 0.5 * number of distinct
-            #          correct answers
-            # Heep:     highest score gets 0, 2nd highest get doubled
-            # Kangaroo: must be incorrect; correct answers get 0
+        # returns list of scores for this question
+        # SCORING METHODS
+        # Sheep:    each player gets total answers in his group as his score
+        # Peehs1:   incorrects = 1.5 * highest correct score
+        # Peehs2:   incorrects = highest correct score + 0.5 * number of distinct
+        #          correct answers
+        # Heep:     highest score gets 0, 2nd highest get doubled
+        # Kangaroo: must be incorrect; correct answers get 0
 
-        def Scores(self, include_bonus):
-            curScore = {}
-            for plr in _Game.Players:
-                curScore[plr] = 0
-            if len(_Game.Players) == 0 or len(_Game.Questions) == 0:
-                return curScore
+        def scores(self, include_bonus):
+            cur_score = {}
+            for plr in self._Game.Players:
+                cur_score[plr] = 0
+            if len(self._Game.Players) == 0 or len(self._Game.Questions) == 0:
+                return cur_score
             highest_score = 0
             second_highest_score = 0
             num_distinct_correct = 0
             for grp in self.Groups:
                 for ans in grp.Answers:
-                    if ans.Player not in curScore:
+                    if ans.Player not in cur_score:
                         continue
-                    curScore[ans.Player] = len(grp.Answers)
-                    return curScore
+                    cur_score[ans.Player] = len(grp.Answers)
+
                 # for peehs/heep
                 if grp.Correct:
                     num_distinct_correct += 1
                     if len(grp.Answers) > highest_score:
                         second_highest_score = highest_score
                         highest_score = len(grp.Answers)
-                    elif second_highest_score < len(grp.Answers) < highest_score:
+                    elif len(grp.Answers) > highest_score and len(grp.Answers) < highest_score:
                         second_highest_score = len(grp.Answers)
 
             # apply special scores depending on scoring method
             for grp in self.Groups:
                 for ans in grp.Answers:
-                    if ans.Player not in curScore:
+                    if ans.Player not in cur_score:
                         continue
                     if self._Game.Method == sg.ShMethod.Sheep:
                         if not grp.Correct:
-                            curScore[ans.Player] = 0
+                            cur_score[ans.Player] = 0
                         # incorrect means invalid for sheep
                     elif self._Game.Method == sg.ShMethod.PeehsDM:
                         # incorrect -> 1.5*sheep
                         if not grp.Correct:
-                            curScore[ans.Player] = 1.5 * highest_score
+                            cur_score[ans.Player] = 1.5 * highest_score
                     elif self._Game.Method == sg.ShMethod.PeehsFB:
                         # incorrect -> sheep + 0.5*distinct
                         if not grp.Correct:
-                            curScore[ans.Player] = highest_score + 0.5 * num_distinct_correct
+                            cur_score[ans.Player] = highest_score + 0.5 * num_distinct_correct
                     elif self._Game.Method == sg.ShMethod.PeehsHybrid:
                         # incorrect -> sheep + 0.5*distinct
                         if not grp.Correct:
-                            curScore[ans.Player] = 1.25 * highest_score + 0.25 * num_distinct_correct
-                    elif _Game.Method == sg.ShMethod.Heep or _Game.Method == sg.ShMethod.Heep15 or _Game.Method == sg.ShMethod.Heep2:
-                        if curScore[ans.Player] == highest_score or not grp.Correct:
-                            curScore[ans.Player] = 0
-                        elif curScore[ans.Player] == second_highest_score:
-                            if _Game.Method == sg.ShMethod.Heep15:
-                                curScore[ans.Player] *= 1.5
-                            elif _Game.Method == sg.ShMethod.Heep2:
-                                curScore[ans.Player] *= 2
-                    elif _Game.Method == sg.ShMethod.Kangaroo:
+                            cur_score[ans.Player] = 1.25 * highest_score + 0.25 * num_distinct_correct
+                    elif self._Game.Method == sg.ShMethod.Heep or self._Game.Method == sg.ShMethod.Heep15 or self._Game.Method == sg.ShMethod.Heep2:
+                        if cur_score[ans.Player] == highest_score or not grp.Correct:
+                            cur_score[ans.Player] = 0
+                        elif cur_score[ans.Player] == second_highest_score:
+                            if self._Game.Method == sg.ShMethod.Heep15:
+                                cur_score[ans.Player] *= 1.5
+                            elif self._Game.Method == sg.ShMethod.Heep2:
+                                cur_score[ans.Player] *= 2
+                    elif self._Game.Method == sg.ShMethod.Kangaroo:
                         if grp.Correct:
-                            curScore[ans.Player] = 0
-                    elif _Game.Method == sg.ShMethod.Manual:
-                        curScore[ans.Player] = 0
+                            cur_score[ans.Player] = 0
+                    elif self._Game.Method == sg.ShMethod.Manual:
+                        cur_score[ans.Player] = 0
                     # apply rounding
-                    if _Game.Rounding == ShRoundingType.Up:
-                        curScore[ans.Player] = math.ceil(curScore[ans.Player])
-                    elif _Game.Rounding == ShRoundingType.Down:
-                        curScore[ans.Player] = math.floor(curScore[ans.Player])
-                    elif _Game.Rounding == ShRoundingType.Nearest:
-                        curScore[ans.Player] = round(curScore[ans.Player])
+                    if self._Game.Rounding == sg.ShRoundingType.Up:
+                        cur_score[ans.Player] = math.ceil(cur_score[ans.Player])
+                    elif self._Game.Rounding == sg.ShRoundingType.Down:
+                        cur_score[ans.Player] = math.floor(cur_score[ans.Player])
+                    elif self._Game.Rounding == sg.ShRoundingType.Nearest:
+                        cur_score[ans.Player] = round(cur_score[ans.Player])
 
                     # apply player & group bonuses
                     if include_bonus:
                         temp_score = cur_score[ans.Player]
-                        if grp.BonusType == ShBonusType.Override:
+                        if grp.BonusType == sg.ShBonusType.Override:
                             temp_score = grp.GroupBonus
-                        elif grp.BonusType == ShBonusType.Add:
+                        elif grp.BonusType == sg.ShBonusType.Add:
                             temp_score += grp.GroupBonus
-                        if ans.BonusType == ShBonusType.Override:
+                        if ans.BonusType == sg.ShBonusType.Override:
                             temp_score = ans.AnswerBonus
-                        elif ans.BonusType == ShBonusType.Add:
+                        elif ans.BonusType == sg.ShBonusType.Add:
                             temp_score += ans.AnswerBonus
                         cur_score[ans.Player] = temp_score
-
-                    def score_up_to(include_bonus):
-                        cur_score = {}
-                        next_score = {}
-                        for plr in _Game.Players:
-                            cur_score[plr] = 0
-                        for que in _Game.Questions:
-                            if que.game_index <= self.game_index:
-                                next_score = que.scores(include_bonus)
-                                for k, v in next_score.items():
-                                    if k in cur_score:
-                                        cur_score[k] += v
             return cur_score
+
+        # returns a dictionary of total scores after this question
+        def score_up_to(self, include_bonus):
+
+            cur_score = {}
+            next_score = {}
+
+            for plr in self._Game.Players:
+                cur_score[plr] = 0
+
+            for x, que in enumerate(self._Game.Questions):
+
+                if que.game_index <= self.game_index:
+                    next_score = que.scores(include_bonus)
+
+                    for k, v in next_score.items():
+                        if k in cur_score:
+                            cur_score[k] += v
+
+            return cur_score
+
+    # Generate post for score totals up to and including this question
 
     class ShPlayer:
         counter = 0
@@ -201,14 +212,14 @@ class ShGame:
             ShGame.ShPlayer.counter += 1
 
         def __str__(self):
-            return f'Player: {self.Name} Answers: {self.Answers} '
+            return f'Player: {self.Name} Answers: {self.Answers} StartScore: {self.StartScore}'
 
         @property
         def Count(self):
             return self.counter
 
         @property
-        def GameIndex(self):
+        def game_index(self):
             return self._Game.Players.index(self)
 
         @property
@@ -225,7 +236,7 @@ class ShGame:
             self.Text = new_text
             self.Correct = True
             self.GroupBonus = 0
-            self.BonusType = NONE
+            self.BonusType = sg.ShBonusType.NONE
             self.Answers = []
             self._Question = ref_question  # reference to question
             # constructor
@@ -254,11 +265,11 @@ class ShGame:
                 return 0
             else:
                 try:
-                    baseScore = _Question.Scores(False)[self.Answers[0].Player]
+                    baseScore = self._Question.scores(False)[self.Answers[0].Player]
                     if include_bonus:
-                        if self.BonusType == ShBonusType.Override:
+                        if self.BonusType == sg.ShBonusType.Override:
                             return self.GroupBonus
-                        elif self.BonusType == ShBonusType.Add:
+                        elif self.BonusType == sg.ShBonusType.Add:
                             return self.GroupBonus + baseScore
                         else:
                             return baseScore
@@ -266,6 +277,8 @@ class ShGame:
                         return baseScore
                 except:
                     return 0
+
+
 
         def __del__(self):
             for ans in self.Answers:
@@ -291,7 +304,6 @@ class ShGame:
             return self._Player
 
         def ChangeGroup(self, ref_group):
-            # print(str(ref_group) +" "+str(self._Group))
             if ref_group == self._Group:
                 return
             if self._Group.Question != ref_group.Question:
@@ -308,9 +320,7 @@ class ShGame:
 
         def StartNewGroup(self):
             oldGroup = self._Group
-            # print(oldGroup)
             newGroup = ShGame.ShGroup(self._Group.Question, self.Text)
-            # print(newGroup)
             oldGroup.Question.Groups.append(newGroup)
             self._Group = newGroup
             newGroup.Answers.append(self)
@@ -352,13 +362,13 @@ class ShGame:
             new_answers = args[2]
             if len(new_answers) != len(new_questions) or len(new_answers[0]) != len(new_players):
                 raise Exception("Answer list must be size [num questions, num players]")
-            self.Questions = [ShQuestion(self, txt) for txt in new_questions]
-            self.Players = [ShPlayer(self, txt) for txt in new_players]
+            self.Questions = [sg.ShQuestion(self, txt) for txt in new_questions]
+            self.Players = [sg.ShPlayer(self, txt) for txt in new_players]
             for iques in range(len(new_questions)):
                 for iplayer in range(len(new_players)):
-                    new_group = ShGroup(self.Questions[iques], new_answers[iques][iplayer])
+                    new_group = sg.ShGroup(self.Questions[iques], new_answers[iques][iplayer])
                     self.Questions[iques].Groups.append(new_group)
-                    new_answer = ShAnswer(new_group, self.Players[iplayer], new_answers[iques][iplayer])
+                    new_answer = sg.ShAnswer(new_group, self.Players[iplayer], new_answers[iques][iplayer])
                     new_group.Answers.append(new_answer)
                     self.Players[iplayer].Answers.append(new_answer)
 
@@ -370,7 +380,6 @@ class ShGame:
         # red
         anstxt = re.sub(r'\W', '', ans.Text.lower())
         for grp in ans.Group.Question.Groups:
-            # print(ans.Group.Question.Groups)
             if grp == ans.Group:
                 continue
             if re.sub(r'\W', '', grp.Text.lower()) == anstxt:
@@ -385,20 +394,31 @@ class ShGame:
                     ans.ChangeGroup(grp)
                     return
 
+    def get_correct_text(self, method, correct):
+        if method == sg.ShMethod.Sheep or method == sg.ShMethod.Heep or method == sg.ShMethod.Heep15 or method == sg.ShMethod.Heep2 or method == sg.ShMethod.Manual:
+            return "Valid" if correct else "Invalid"
+        else:
+            return "Correct" if correct else "Incorrect"
+
+    def is_score_descending(method):
+        if method == sg.ShMethod.PeehsDM or method == sg.ShMethod.PeehsFB or method == sg.ShMethod.PeehsHybrid:
+            return False
+        else:
+            return True
+
     def loadReveal(self):
 
         global myLabel2, Roundtype
         filename = ""
-        # filename = "C:/Users/keith/Desktop/sheep/test.sheep17"
-        filename = filedialog.askopenfilename(title="Load Sheep Scoring File",
-                                              filetypes=[("Sheep Score 2017 File", "*.sheep17")])
+        #filename = "C:/Users/keith/Desktop/sheep/test.sheep17"
+        filename = filedialog.askopenfilename(title="Load Sheep Scoring File",filetypes=[("Sheep Score 2017 File", "*.sheep17")])
         if filename == "": return
         resetProgram()
         tree = ET.parse(filename)
         root = tree.getroot()
         if root.tag == "SheepScore2012Game":
             list = []
-            for child in root:  # sanity check file need uniquie player names
+            for child in root:  # sanity check file need unique player names
                 if child.tag == "Player":
                     list.append(child.text)
                     if len(list) != len(set(list)):
@@ -415,7 +435,6 @@ class ShGame:
                     self.Rounding = self.ShRoundingType[child.text]
                     # Roundtype.set(rt[child.text])
                 elif child.tag == "Question":
-                    # print(child.attrib['GameIndex'], child.text)
                     qindex = int(child.attrib['GameIndex'])
                     while len(self.Questions) < qindex + 1:
                         self.Questions.append(self.ShQuestion(self, "(blank)"))
@@ -431,10 +450,11 @@ class ShGame:
                     tempcorrect = child.attrib['Correct']
                     tempgroupbonus = child.attrib['GroupBonus']
                     tempgroupbonustype = child.attrib['BonusType']
+                    if tempgroupbonustype=="None": tempgroupbonustype="NONE"
                     newGroup = self.ShGroup(self.Questions[group_q_index], "")
                     newGroup.Correct = tempcorrect
                     newGroup.GroupBonus = tempgroupbonus
-                    newGroup.BonusType = tempgroupbonustype
+                    newGroup.BonusType = self.ShBonusType[tempgroupbonustype]
                     self.Questions[group_q_index].Groups.append(newGroup)
                     for item in child:
                         if item.tag == "Text":
@@ -444,13 +464,13 @@ class ShGame:
                             ans_p_index = int(item.attrib['PlayerIndex'])
                             tempansbonus = int(item.attrib["AnswerBonus"])
                             tempansbonustype = item.attrib['BonusType']
+                            if tempansbonustype == "None": tempansbonustype = "NONE"
                             anstext = item.text
                             newAns = ShGame.ShAnswer(newGroup, self.Players[ans_p_index], anstext)
                             newAns.AnswerBonus = tempansbonus
-                            newAns.BonusType = tempansbonustype
+                            newAns.BonusType = self.ShBonusType[tempansbonustype]
                             newGroup.Answers.append(newAns)
-                            # print(f"newgroup {self.Questions[group_q_index].Groups}")
-                            # self.Players[ans_p_index].Answers.append(newAns)
+
             if len(self.Questions) >= curQ:
                 myLabel2.grid_forget()
                 myLabel2 = Label(window, text=self.Questions[curQ - 1].Text)
@@ -497,16 +517,18 @@ class ShGame:
         ET.indent(tree, '  ')
         tree.write(filename, encoding='utf-8', xml_declaration=True)
 
+
 def qset(event):
     global curQ
     var = StringVar
     var = myTextbox1.get()
-    if int(var)>0:
-        curQ=int(var)-1
+    if int(var) > 0:
+        curQ = int(var) - 1
         qup()
     else:
-        curQ=2
+        curQ = 2
         qdown()
+
 
 def qdown():
     global curQ
@@ -532,8 +554,6 @@ def qup():
     if curQ > len(sg.Questions): curQ = len(sg.Questions)
     if curQ < len(sg.Questions):
         curQ = curQ + 1
-    else:
-        curQ == 1
     myTextbox1.delete(0, END)
     myTextbox1.insert(INSERT, curQ)
     myTextbox1.grid_forget()
@@ -622,7 +642,9 @@ def edAL(edAText, combo):
 
 def edQL(edQText):
     # file1 = open("C:/Users/keith/Desktop/sheep/questions.txt", 'r')
+    file1=""
     file1 = open(filedialog.askopenfilename(title="Load Questions from File", filetypes=[("txt files", "*.txt")]), 'r')
+    if file1 == "": return
     strvar = file1.read()
     edQText.delete(1.0, END)
     edQText.insert(INSERT, strvar)
@@ -680,7 +702,7 @@ def edPSave(edAW, edAText, combo):
         newplayers = []
         for player in players:  # add the name missing from playernames
             if player.Name not in dbplayernames:
-                sg.Players.append(ShGame.ShPlayer(sg, player.Name, 0))
+                sg.Players.append(ShGame.ShPlayer(sg, player.Name, player.StartScore))
                 newplayers.append(player.Name)
         for z in todeleteplayers:  # Lets delete deleted players.
             for x, player in enumerate(sg.Players):
@@ -702,9 +724,11 @@ def edPSave(edAW, edAText, combo):
         sg.Players = sorted(sg.Players, key=lambda w: w.Name.lower())
         dbplayernames = []
         playernames = []
+
         for player in sg.Players: dbplayernames.append(player.Name)
         for player in players: playernames.append(player.Name)
         for pnum, player in enumerate(players):
+            sg.Players[pnum].StartScore = players[pnum].StartScore
             for qnum, anstxt in enumerate(player.Answers):
                 while qnum == len(sg.Questions):
                     sg.Questions.append(ShGame.ShQuestion(sg, ""))
@@ -795,12 +819,12 @@ def newPlayer(edAText, combo, edAW):
     newPW = Toplevel(edAW)
     newPW.bind('<Return>', lambda x: edPOK(edAText, combo, edAW, newPW, newPEntry.get()))
     newPW.title("New Player")
-    newPLabel = Label(newPW, text="Enter new player name:", padx=10, font=20).grid(row=0, column=0)
+    Label(newPW, text="Enter new player name:", padx=10, font=20).grid(row=0, column=0)
     newPEntry = Entry(newPW, font=20)
     newPEntry.grid(row=1, column=0)
-    newPOK = Button(newPW, text='OK', command=lambda: edPOK(edAText, combo, edAW, newPW, newPEntry.get())).grid(row=2,
-                                                                                                                column=3)
-    newPCancel = Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2, column=4)
+    Button(newPW, text='OK', command=lambda: edPOK(edAText, combo, edAW, newPW, newPEntry.get())).grid(row=2,
+                                                                                                       column=3)
+    Button(newPW, text='Cancel', command=lambda: edPCancel(edAW, newPW)).grid(row=2, column=4)
     newPEntry.focus_force()
 
 
@@ -851,10 +875,11 @@ def delPlayer(edAText, combo):
     combo.event_generate('<<ComboboxSelected>>')
 
 
-def TextBoxUpdate(edAText, combo):
+def TextBoxUpdate(edATB, edAText, combo):
     global curP, current_var, players
     # Get current answers
     if len(players) > 0:
+        players[curP].StartScore = edATB.get()
         answers = edAText.get(1.0, END).splitlines()
         if answers[-1].lstrip() == '':
             del answers[-1]
@@ -874,6 +899,8 @@ def TextBoxUpdate(edAText, combo):
                 index += 1
             while index < len(players[curP].Answers):
                 del players[curP].Answers[index]
+
+        # Lets display new player.
         current_value = current_var.get()
         index = 0
         for item in players:
@@ -883,6 +910,8 @@ def TextBoxUpdate(edAText, combo):
                 index += 1
         if len(players) != 0:
             combo.current(curP)
+            edATB.delete(0, END)
+            edATB.insert(0, players[curP].StartScore)
             PAnswers = []
             answers = ""
             for x in players[curP].Answers: PAnswers.append(x)
@@ -890,6 +919,15 @@ def TextBoxUpdate(edAText, combo):
             edAText.delete(1.0, END)
             edAText.insert(INSERT, answers)
             edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
+
+
+def validate_entry2(inp):
+    if inp == "": return True
+    try:
+        float(inp)
+    except:
+        return False
+    return True
 
 
 def edAnswers(window):
@@ -915,7 +953,7 @@ def edAnswers(window):
 
     window.withdraw()
     edAW = Toplevel(window)
-    edAW.bind("<<ComboboxSelected>>", lambda x: TextBoxUpdate(edAText, combo))
+    edAW.bind("<<ComboboxSelected>>", lambda x: TextBoxUpdate(edATB, edAText, combo))
     if len(players) == 0:
         players = []
     if len(sg.Players) != 0:
@@ -929,6 +967,9 @@ def edAnswers(window):
                         playerlist.append(ans.Player.Name)
                     if (len(players[playerlist.index(ans.Player.Name)].Answers)) == qnum:
                         players[playerlist.index(ans.Player.Name)].Answers.append(ans.Text)
+    for x, y in enumerate(players):
+        y.StartScore = sg.Players[x].StartScore
+
     if curP >= len(players):
         curP = len(players) - 1
     answers = ""
@@ -947,9 +988,14 @@ def edAnswers(window):
     edAW.title("Edit Entries")
     edALabel = Label(edAW, text="Player:")
     edALabel.grid(row=0, column=0)
-    spacer = Label(edAW).grid(row=0, column=2)
+    Label(edAW).grid(row=0, column=2)
     edALabel = Label(edAW, text="Starting Score:", padx=10)
     edALabel.grid(row=1, column=0)
+    edATB = Entry(edAW, width=10, validate="key", validatecommand=(window.register(validate_entry2), "%P"))
+    if len(players) != 0:
+        ss = players[curP].StartScore
+        edATB.insert(INSERT, ss)
+    edATB.grid(row=1, column=1)
     edAText = Text(edAW)
     if len(players) == 0:
         edAText.insert(INSERT,
@@ -957,22 +1003,16 @@ def edAnswers(window):
     else:
         edAText.insert(INSERT, answers)
     edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
-    edALoad = Button(edAW, text="Load", padx=20, command=lambda: edAL(edAText, combo)).grid(row=0, column=3, padx=10,
-                                                                                            pady=5)
-    edANP = Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText, combo, edAW)).grid(row=1,
-                                                                                                          column=3,
-                                                                                                          padx=10,
-                                                                                                          pady=5)
-    edACN = Button(edAW, text="Change Name", padx=0, command=lambda: renamePlayer(edAText, combo, edAW)).grid(row=2,
-                                                                                                              column=3,
-                                                                                                              padx=10,
-                                                                                                              pady=5)
-    edADP = Button(edAW, text="Delete Player", padx=0, command=lambda: delPlayer(edAText, combo)).grid(row=3, column=3,
-                                                                                                       padx=10, pady=5)
-    edASave = Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText, combo)).grid(row=9, column=3,
-                                                                                                    padx=10, pady=5)
-    edACancel = Button(edAW, text="Cancel", padx=20, command=lambda: edCancel(edAW)).grid(row=10, column=3, padx=10,
+    Button(edAW, text="Load", padx=20, command=lambda: edAL(edAText, combo)).grid(row=0, column=3, padx=10, pady=5)
+    Button(edAW, text="New Player", padx=4, command=lambda: newPlayer(edAText, combo, edAW)).grid(row=1, column=3,
+                                                                                                  padx=10, pady=5)
+    Button(edAW, text="Change Name", padx=0, command=lambda: renamePlayer(edAText, combo, edAW)).grid(row=2, column=3,
+                                                                                                      padx=10, pady=5)
+    Button(edAW, text="Delete Player", padx=0, command=lambda: delPlayer(edAText, combo)).grid(row=3, column=3, padx=10,
+                                                                                               pady=5)
+    Button(edAW, text="Save Changes", command=lambda: edPSave(edAW, edAText, combo)).grid(row=9, column=3, padx=10,
                                                                                           pady=5)
+    Button(edAW, text="Cancel", padx=20, command=lambda: edCancel(edAW)).grid(row=10, column=3, padx=10, pady=5)
     edAW.rowconfigure(4, weight=1)
     edAW.columnconfigure(2, weight=1)
     return
@@ -999,15 +1039,6 @@ def validate_entry(text):
     return text.isdecimal()
 
 
-def outPlayerscore():
-    print("[", end="")
-    for i in myPlayers:
-        if i != myPlayers[-1]:
-            print(i.score, end=",")
-        else:
-            print(i.score, end="")
-    print("]")
-
 
 def bDown(event):
     tv = event.widget
@@ -1024,7 +1055,7 @@ def bUp(event):
         fromANS = myTreeview.item(tv.selection())['values']
         fromGRP = myTreeview.item(tv.selection())['values']
         toGRP = moveto['values']
-        if toGRP != "":
+        if toGRP != "" and fromGRP != "":
             if fromGRP[0] == toGRP[0] and len(fromGRP) == 3:
                 for i, q in enumerate(sg.Questions):
                     if int(i) == int(fromANS[0]):
@@ -1054,8 +1085,9 @@ def displayTreeview():
 
 def updateTreeview():
     global myTreeview, curQ, vsb
+    sg.Method = sg.ShMethod(Gametype.get())
+    sg.Rounding = sg.ShRoundingType(Roundtype.get())
     if len(sg.Questions) != 0:
-        # print("TreeView Updated")
         myTreeview.grid_forget()
         myTreeview.delete(*myTreeview.get_children())
         if (curQ > len(sg.Questions)):
@@ -1073,11 +1105,11 @@ def updateTreeview():
         for group in curQuestion.Groups:
             group_node = myTreeview.insert("", "end", open=cbvar1.get(), tags="group",
                                            value=[sg.Questions.index(curQuestion), group.Text],
-                                           text=group.Text + f" - [{len(group.Answers)}]")
+                                           text=TextForGroupNode(group))
             for answer in group.Answers:
                 myTreeview.insert(group_node, "end", tags="answer",
                                   value=[sg.Questions.index(curQuestion), group.Text, answer.Player.Name],
-                                  text=answer.Text + " - " + answer.Player.Name)
+                                  text=TextForAnswerNode(answer))
         displayTreeview()
     else:
         myTreeview.grid_forget()
@@ -1131,7 +1163,6 @@ def set_newgroupname(top, input):
     q = values[0]
     question = sg.Questions[q]
     groupnames = [grp.Text for grp in question.Groups]
-    # print(groupnames)
     if input not in groupnames and input != "":
         sg.Questions[q].Groups[groupnames.index(str(values[1]))].Text = input
     updateTreeview()
@@ -1142,8 +1173,6 @@ def UseAsGroupName():
     q = values[0]
     question = sg.Questions[q]
     groupnames = [grp.Text for grp in question.Groups]
-    # print(values)
-    # print(groupnames)
     answers = [x for x in sg.Questions[q].Groups[groupnames.index(values[1])].Answers]
     for x in answers:
         if x.Player.Name == str(values[2]):
@@ -1174,12 +1203,353 @@ def MoveToNewGroup():
     updateTreeview()
 
 
+def copyPlayerListMenuItem_Click():
+    if sg is None or len(sg.Players) == 0 or len(sg.Questions) == 0:
+        copy_to_clipboard("Either no questions or no players loaded.")
+        return
+    if Output_type.get() == 1:
+        TableText = True
+        UnformattedText = False
+        FormattedText = False
+    elif Output_type.get() == 2:
+        FormattedText = True
+        UnformattedText = False
+        TableText = False
+    else:
+        UnformattedText = True
+        FormattedText = False
+        TableText = False
+
+    any_starting_scores = any(int(p.StartScore) != 0 for p in sg.Players)
+    ss_pre = "[b][color=green]" if FormattedText or TableText else ""
+    ss_post = "[/color][/b]" if FormattedText or TableText else ""
+    start_score_string = ss_pre + " (starting score)" + ss_post if any_starting_scores else ""
+
+    txt = ("" if UnformattedText else "[b]") + str(len(sg.Players)) + " players" + start_score_string + ":" + (
+        "" if UnformattedText else "[/b]") + "\n\n" + \
+          "\n".join(sorted( p.Name   + ((" " + ss_pre + "(" + ("%.4g" % p.StartScore) + ")" + ss_post) if int(p.StartScore) != 0 else "") for p in sg.Players))
+
+
+    copy_to_clipboard(txt)
+
+
+def copy_to_clipboard(stuff):
+    r = Tk()
+    r.withdraw()
+    r.clipboard_clear()
+    r.clipboard_append(stuff)
+    r.update()  # now it stays on the clipboard after the window is closed
+    r.destroy()
+
+
+# returns text that should be displayed on this treenode
+def TextForGroupNode(grp):
+    curScoreMethod = sg.Method
+    if len(grp.Answers) == 0:
+        return grp.Text
+
+    scoreString = ""
+
+    try:
+        if curScoreMethod == sg.ShMethod.Manual:
+            scoreString = "[" + str(grp.GroupBonus) + "]"
+        else:
+            bonus_text = ""
+            if grp.BonusType == ShGame.ShBonusType.Override:
+                bonus_text = " (=" + str(grp.GroupBonus) + ")"
+            elif grp.BonusType == ShGame.ShBonusType.Add:
+                if grp.GroupBonus > 0:
+                    bonus_text = " + " + str(grp.GroupBonus)
+                if grp.GroupBonus < 0:
+                    bonus_text = " - " + str(-grp.GroupBonus)
+            scoreString = "[" + str(grp.Question.scores(False)[grp.Answers[0].Player]) + bonus_text + "]"
+    except:
+        scoreString = "ERROR"
+
+    return grp.Text + " - " + (
+        "" if grp.Correct else ShGame.get_correct_text(curScoreMethod, grp.Correct).upper() + " - ") + scoreString
+
+
+def TextForAnswerNode(ans):
+    bonus_text = ""
+    if ans.BonusType == ShGame.ShBonusType.Override:
+        bonus_text = " (=" + ans.AnswerBonus + ")"
+    elif ans.BonusType == ShGame.ShBonusType.Add:
+        if ans.AnswerBonus != 0:
+            bonus_text = " (" + ("+" if ans.AnswerBonus > 0 else "") + ans.AnswerBonus + ")"
+
+    return ans.Text + " - " + ans.Player.Name + bonus_text
+
+
+# generate post for answers
+def copyAnswersMenuItem_Click():
+    global curQ
+    cur_q_index = curQ -1
+    curScoreMethod = sg.Method
+    if sg is None or len(sg.Players) == 0 or len(sg.Questions) == 0:
+        copy_to_clipboard("Either no questions or no players loaded.")
+        return
+
+    if Output_type.get() == 1:
+        TableText = True
+        UnformattedText = False
+        FormattedText = False
+    elif Output_type.get() == 2:
+        FormattedText = True
+        UnformattedText = False
+        TableText = False
+    else:
+        UnformattedText = True
+        FormattedText = False
+        TableText = False
+
+    OpenBold = "" if UnformattedText else "[B]"
+    CloseBold = "" if UnformattedText else "[/B]"
+
+    txt = OpenBold + "Question " + str(cur_q_index + 1) + ": " + sg.Questions[cur_q_index].Text + CloseBold + "\n\n"
+
+    # sheepscoreoutput
+    validGroups = []  # valid/correct groups
+    validAces = []  # valid/correct aces
+    invalidGroups = []  # invalid/incorrect groups
+
+    if curScoreMethod == sg.ShMethod.Sheep or curScoreMethod == sg.ShMethod.Heep or curScoreMethod == sg.ShMethod.Heep15 or curScoreMethod == sg.ShMethod.Heep2 or curScoreMethod == sg.ShMethod.PeehsDM or curScoreMethod == sg.ShMethod.PeehsFB or curScoreMethod == sg.ShMethod.PeehsHybrid:
+        validGroups = [g for g in sg.Questions[cur_q_index].Groups if len(g.Answers) > 1 and g.Correct]
+        validGroups.sort(key=lambda g: -len(g.Answers))
+
+        validAces = [g for g in sg.Questions[cur_q_index].Groups if len(g.Answers) == 1 and g.Correct]
+
+        invalidGroups = [g for g in sg.Questions[cur_q_index].Groups if not g.Correct]
+    elif curScoreMethod == sg.ShMethod.Kangaroo:
+        validGroups = [g for g in sg.Questions[cur_q_index].Groups if len(g.Answers) > 1 and not g.Correct]
+        validGroups.sort(key=lambda g: -len(g.Answers))
+
+        validAces = [g for g in sg.Questions[cur_q_index].Groups if len(g.Answers) == 1 and not g.Correct]
+
+        invalidGroups = [g for g in sg.Questions[cur_q_index].Groups if g.Correct]
+    elif curScoreMethod == sg.ShMethod.Manual:
+        validGroups = [g for g in sg.Questions[cur_q_index].Groups if g.Correct]
+        validGroups.sort(key=lambda g: -len(g.Answers))
+
+        invalidGroups = [g for g in sg.Questions[cur_q_index].Groups if not g.Correct]
+
+    for grp in validGroups:
+
+        g_bonus_text = get_score_output_text(grp.GetScore(False), grp.BonusType, grp.GroupBonus, curScoreMethod).strip()
+        txt += OpenBold + grp.Text + " - " + g_bonus_text + CloseBold + "\n"
+        for ans in sorted(grp.Answers, key=lambda a: a.Player.Name):
+            p_bonus_text = get_bonus_output_text(ans.BonusType, ans.AnswerBonus, curScoreMethod).strip()
+            txt += ans.Player.Name + (
+                " " + OpenBold + p_bonus_text + CloseBold if p_bonus_text else "") + "\n"
+
+        txt += "\n"
+
+    if len(validAces) > 0:
+        txt += OpenBold + "ACES - " + str(
+            validAces[0].GetScore(False)) + ":" + CloseBold + "\n" + "\n"
+
+    for grp in validAces:
+        ans = grp.Answers[0]
+        if ans.BonusType == ShGame.ShBonusType.Override:
+            bonus_text = get_bonus_output_text(ans.BonusType, ans.AnswerBonus, curScoreMethod)
+        else:
+            bonus_text = get_bonus_output_text(grp.BonusType, grp.GroupBonus,
+                                               curScoreMethod) + " " + get_bonus_output_text(
+                ans.BonusType, ans.AnswerBonus, curScoreMethod)
+        bonus_text = bonus_text.strip()
+        if bonus_text:
+            bonus_text = OpenBold + bonus_text + CloseBold
+        txt += OpenBold + grp.Text + CloseBold + " - " + grp.Answers[
+            0].Player.Name + " " + bonus_text + "\n"
+
+    if len(invalidGroups) > 0:
+        txt += "\n" + OpenBold + ShGame.get_correct_text(curScoreMethod, (
+                curScoreMethod == sg.ShMethod.Kangaroo)) + "S" + " - " + str(
+            invalidGroups[0].GetScore(False)) + ":" + CloseBold + "\n" + "\n"
+
+    for grp in sorted(invalidGroups, key=lambda g: g.Text):
+        for ans in sorted(grp.Answers, key=lambda a: a.Player.Name):
+            if ans.BonusType == ShGame.ShBonusType.Override:
+                bonus_text = get_bonus_output_text(ans.BonusType, ans.AnswerBonus, curScoreMethod)
+            else:
+                bonus_text = get_bonus_output_text(grp.BonusType, grp.GroupBonus,
+                                                   curScoreMethod) + " " + get_bonus_output_text(ans.BonusType,
+                                                                                                 ans.AnswerBonus,
+                                                                                                 curScoreMethod)
+            bonus_text = bonus_text.strip()
+            if bonus_text:
+                bonus_text = OpenBold + bonus_text + CloseBold
+
+            txt += OpenBold + ans.Text + CloseBold + " - " + ans.Player.Name + " " + bonus_text + "\n"
+    copy_to_clipboard(txt)
+
+# methods for getting score
+def get_score_output_text(score, bonus_type, bonus, method):
+    if method == "Manual":
+        if bonus_type == "None":
+            return "0"
+        else:
+            return format(bonus, "0.#####")
+    else:
+        return str(score) + (" " + get_bonus_output_text(bonus_type, bonus, method) if bonus != 0 else "")
+
+
+def get_bonus_output_text(bonus_type, bonus, method):
+    if bonus_type == ShGame.ShBonusType.NONE:
+        return ""
+
+    if Output_type.get() == 1:
+        TableText = True
+        UnformattedText = False
+        FormattedText = False
+    elif Output_type.get() == 2:
+        FormattedText = True
+        UnformattedText = False
+        TableText = False
+    else:
+        UnformattedText = True
+        FormattedText = False
+        TableText = False
+
+    bonus_color = "Blue"
+
+    if bonus_type == ShGame.ShBonusType.Override:
+        bonus_color = "Purple"
+
+    if bonus_type == ShGame.ShBonusType.Add and (
+            (bonus < 0) ^ (method == sg.ShMethod.PeehsFB or method == sg.ShMethod.PeehsDM or method == sg.ShMethod.PeehsHybrid)):
+        bonus_color = "Red"
+
+    bonus_open = "" if UnformattedText else "[COLOR=\"" + bonus_color + "\"]"
+    bonus_close = "" if UnformattedText else "[/COLOR]"
+
+    bonus_pfx = ""
+    if bonus_type == ShGame.ShBonusType.Override:
+        bonus_pfx = "="
+    elif float(bonus) > 0:
+        bonus_pfx = "+"
+
+    return bonus_open + "(" + bonus_pfx + str(bonus) + ")" + bonus_close
+
+
+# Generate post for score totals up to and including this question
+def copy_scores_up_to_this_question():
+    global curQ
+    cur_q_index = curQ -1
+    curScoreMethod = sg.Method
+    if sg is None or len(sg.Players) == 0 or len(sg.Questions) == 0:
+        copy_to_clipboard("Either no questions or no players loaded.")
+        return
+
+    cur_scores = sg.Questions[cur_q_index].score_up_to(True)
+
+    for plr in sg.Players:
+        if plr not in cur_scores:
+            copy_to_clipboard("ERROR")
+            return
+        cur_scores[plr] += float(plr.StartScore)
+
+    order_mult = 1 if ShGame.is_score_descending(curScoreMethod) else -1
+    txt = ""
+
+    if Output_type.get() == 1:
+        TableText = True
+        UnformattedText = False
+        FormattedText = False
+    elif Output_type.get() == 2:
+        FormattedText = True
+        UnformattedText = False
+        TableText = False
+    else:
+        UnformattedText = True
+        FormattedText = False
+        TableText = False
+
+    if FormattedText or TableText:
+        txt += "[b]"
+
+    txt += "Scores after question " + str(cur_q_index + 1) + ":"
+
+    if FormattedText or TableText:
+        txt += "[/b]"
+
+    txt += "\n\n"
+
+    s_list = sorted(sg.Players, key=lambda p: cur_scores[p] * order_mult, reverse=True)
+
+    if TableText:
+        txt += "[table=30][tr][th]Player[/th][th]Score[/th][/tr]" + \
+            "\n".join([("[tr][td]"+ p.Name + "[/td][td]" + ("%.4g" % cur_scores[p]) + "[/td][/tr]")  for p in s_list]) + \
+            "[/table]\n"
+    else:
+        txt += "\n".join([("%.4g" % cur_scores[p]) + " - " + p.Name for p in s_list]) + "\n"
+
+    copy_to_clipboard(txt)
+
+
+def copyAllScoresUpToThisQuestionMenuItem_Click():
+    global curQ
+    cur_q_index = curQ -1
+    curScoreMethod = sg.Method
+    if sg is None or len(sg.Players) == 0 or len(sg.Questions) == 0:
+        copy_to_clipboard("Either no questions or no players loaded.")
+        return
+
+    # only for tables
+    if Output_type.get() != 1:
+        copy_to_clipboard("List all scores only available for Table Formatting")
+        return
+
+    order_mult = -1 if ShGame.is_score_descending(curScoreMethod) else 1
+
+    curScores = {}
+    for plr in sg.Players:
+        curScores[plr] = []
+
+    for iQues in range(cur_q_index + 1):
+        q_scores = sg.Questions[iQues].scores(True)
+        for plr_scores in curScores.items():
+            if plr_scores[0] not in q_scores:
+                copy_to_clipboard("ERROR: players list out of sync q=" + str(iQues) + " p=" + str(plr_scores[0].game_index))
+                return
+            plr_scores[1].append(q_scores[plr_scores[0]])
+
+    if any(len(ps[1]) != (1 + cur_q_index) for ps in curScores.items()):
+        copy_to_clipboard("ERROR: answers list out of sync")
+        return
+
+    txt = "[b]Scores after question " + str(
+        cur_q_index + 1) + ":[/b]" + "\n" + "\n" + "[table=30][tr][th]Player[/th][th]Total[/th]"
+
+    any_starting_scores = any(p.StartScore != 0 for p in sg.Players)
+
+    if any_starting_scores:
+        txt += "[th]Start[/th]"
+
+    for iQues in range(cur_q_index + 1):
+        txt += "[th]Q" + str(iQues + 1) + "[/th]"
+    txt += "[/tr]"
+
+    for plr_scores in sorted(curScores.items(), key=lambda ps: (str(float(ps[0].StartScore) + sum(ps[1]))) * order_mult):
+        plr = plr_scores[0]
+        scrs = plr_scores[1]
+        start_score_string = "\t" + str(plr.StartScore) if any_starting_scores else ""
+        txt += "\n" + "[tr][td]" + plr.Name + "[/td][td][b]" + str(int(plr.StartScore) + sum(scrs)) + "[/b][/td][td]" + start_score_string + "[/td]"+"".join(("[td]"+str(s)+"[/td]") for s in scrs) + "[/tr]"
+
+    txt += "[/table]" + "\n"
+
+    copy_to_clipboard(txt)
+
+
 def debug():
     print("sg " + str(sg))
-    print("sg.dict" + str(sg.__dict__))
+    print("Game type: " + str(sg.Method) + " Rounding: " + str(sg.Rounding))
     print("GetAllAnswers for Q[0]:", sg.Questions[0].GetAllAnswers())
-    print("Questions[0].Groups[0]" + str(sg.Questions[0].Groups[0].__dict__))
-    print("Players[0]" + str(sg.Players[0].__dict__))
+    print("Question[0].Scores:", sg.Questions[0].Scores(False))
+    scores = []
+    for x, group in enumerate(sg.Questions[0].Groups):
+        scores.append(f"Group {x} scores {group.GetScore(False)} ")
+    print("q0g0.GetScore", scores)
 
 
 gt = {'Sheep': 1, 'PeehsDM': 2, 'PeehsFB': 3, 'PeehsHybrid': 4, 'Heep': 5, 'Heep15': 6, 'Heep2': 7, 'Kangaroo': 8,
@@ -1202,8 +1572,8 @@ window = Tk()
 
 window.geometry("680x450")
 window.title("Sheep Score Foggies Edition")
-Outputtype = IntVar()
-Outputtype.set(1)
+Output_type = IntVar()
+Output_type.set(1)
 Gametype = IntVar()
 Gametype.set(1)
 Roundtype = IntVar()
@@ -1211,6 +1581,7 @@ Roundtype.set(0)
 current_var = StringVar()
 menubar = Menu(window)
 cbvar1 = IntVar()
+ss = IntVar()
 window.config(menu=menubar)
 
 fileMenu = Menu(menubar, tearoff=0)
@@ -1219,7 +1590,7 @@ menubar.add_cascade(label="File", menu=fileMenu)
 fileMenu.add_command(label="New Reveal", command=resetProgram)
 fileMenu.add_command(label="Load Reveal...", command=sg.loadReveal)
 fileMenu.add_command(label="Save Reveal...", command=sg.saveReveal)
-fileMenu.add_command(label="Debug", command=debug)
+#fileMenu.add_command(label="Debug", command=debug)
 fileMenu.add_separator()
 fileMenu.add_command(label="Exit", command=quit)
 
@@ -1230,40 +1601,40 @@ sheepMenu.add_command(label="Edit Entries...", command=lambda: edAnswers(window)
 
 scoringMenu = Menu(menubar, tearoff=0)
 sheepMenu.add_cascade(label="Scoring", menu=scoringMenu)
-scoringMenu.add_radiobutton(label="Sheep", value=1, variable=Gametype)
+scoringMenu.add_radiobutton(label="Sheep", value=1, variable=Gametype, command=updateTreeview)
 peehsMenu = Menu(menubar, tearoff=0)
 scoringMenu.add_cascade(label="Peehs", menu=peehsMenu)
-peehsMenu.add_radiobutton(label="DM Scoring", value=2, variable=Gametype)
-peehsMenu.add_radiobutton(label="FB Scoring", value=3, variable=Gametype)
-peehsMenu.add_radiobutton(label="Hybrid", value=4, variable=Gametype)
+peehsMenu.add_radiobutton(label="DM Scoring", value=2, variable=Gametype, command=updateTreeview)
+peehsMenu.add_radiobutton(label="FB Scoring", value=3, variable=Gametype, command=updateTreeview)
+peehsMenu.add_radiobutton(label="Hybrid", value=4, variable=Gametype, command=updateTreeview)
 heepsMenu = Menu(menubar, tearoff=0)
 scoringMenu.add_cascade(label="Heeps", menu=heepsMenu)
-heepsMenu.add_radiobutton(label="2x Heep Bonus", value=7, variable=Gametype)
-heepsMenu.add_radiobutton(label="1.5x Heep Bonus", value=6, variable=Gametype)
-heepsMenu.add_radiobutton(label="No Heep Bonus", value=5, variable=Gametype)
-scoringMenu.add_radiobutton(label="Kangaroo", value=8, variable=Gametype)
-scoringMenu.add_radiobutton(label="Manual", value=9, variable=Gametype)
+heepsMenu.add_radiobutton(label="2x Heep Bonus", value=7, variable=Gametype, command=updateTreeview)
+heepsMenu.add_radiobutton(label="1.5x Heep Bonus", value=6, variable=Gametype, command=updateTreeview)
+heepsMenu.add_radiobutton(label="No Heep Bonus", value=5, variable=Gametype, command=updateTreeview)
+scoringMenu.add_radiobutton(label="Kangaroo", value=8, variable=Gametype, command=updateTreeview)
+scoringMenu.add_radiobutton(label="Manual", value=9, variable=Gametype, command=updateTreeview)
 scoringMenu.add_separator()
 
 roundingMenu = Menu(menubar, tearoff=0)
 scoringMenu.add_cascade(label="Rounding", menu=roundingMenu)
-roundingMenu.add_radiobutton(label="No Rounding", value=0, variable=Roundtype)
-roundingMenu.add_radiobutton(label="Round Up", value=1, variable=Roundtype)
-roundingMenu.add_radiobutton(label="Round Down", value=2, variable=Roundtype)
-roundingMenu.add_radiobutton(label="Round Nearest", value=3, variable=Roundtype)
+roundingMenu.add_radiobutton(label="No Rounding", value=0, variable=Roundtype, command=updateTreeview)
+roundingMenu.add_radiobutton(label="Round Up", value=1, variable=Roundtype, command=updateTreeview)
+roundingMenu.add_radiobutton(label="Round Down", value=2, variable=Roundtype, command=updateTreeview)
+roundingMenu.add_radiobutton(label="Round Nearest", value=3, variable=Roundtype, command=updateTreeview)
 
 outputMenu = Menu(menubar, tearoff=0)
 menubar.add_cascade(label="Output", menu=outputMenu)
-outputMenu.add_command(label="Copy answers for this question")
-outputMenu.add_command(label="Copy total scores up to this question")
-outputMenu.add_command(label="Copy score table up to this question")
-outputMenu.add_command(label="Copy Player list")
+outputMenu.add_command(label="Copy answers for this question", command=copyAnswersMenuItem_Click)
+outputMenu.add_command(label="Copy total scores up to this question",command=copyAllScoresUpToThisQuestionMenuItem_Click)
+outputMenu.add_command(label="Copy score table up to this question",command=copy_scores_up_to_this_question)
+outputMenu.add_command(label="Copy Player list", command=copyPlayerListMenuItem_Click)
 outputMenu.add_separator()
 styleMenu = Menu(menubar, tearoff=0)
 outputMenu.add_cascade(label="Output Style", menu=styleMenu)
-styleMenu.add_radiobutton(label="Forum Table", value=1, variable=Outputtype)
-styleMenu.add_radiobutton(label="Forum Formatted Text", value=2, variable=Outputtype)
-styleMenu.add_radiobutton(label="Unformatted Text", value=3, variable=Outputtype)
+styleMenu.add_radiobutton(label="Forum Table", value=1, variable=Output_type)
+styleMenu.add_radiobutton(label="Forum Formatted Text", value=2, variable=Output_type)
+styleMenu.add_radiobutton(label="Unformatted Text", value=3, variable=Output_type)
 
 Button(window, text="<", command=qdown).grid(row=0, column=1)
 Button(window, text=">", command=qup).grid(row=0, column=3)
@@ -1274,8 +1645,7 @@ myCheckbox1.grid(row=0, column=4)
 myLabel2 = Label(window, text="Click Sheep > Edit Questions... to begin.")
 myLabel2.grid(row=0, column=5)
 
-myTextbox1 = Entry(window, width=4, validate="key",
-                   validatecommand=(window.register(validate_entry), "%S"))
+myTextbox1 = Entry(window, width=4, validate="key", validatecommand=(window.register(validate_entry), "%S"))
 
 myTextbox1.insert(INSERT, curQ)
 myTextbox1.grid(row=0, column=2)
@@ -1301,7 +1671,6 @@ vsb = ttk.Scrollbar(window, orient="vertical", command=myTreeview.yview)
 window.rowconfigure(1, weight=1)
 window.columnconfigure(5, weight=1)
 
-# sg.loadReveal()
-
+#sg.loadReveal()
 
 window.mainloop()
