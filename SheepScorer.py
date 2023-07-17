@@ -258,8 +258,10 @@ class ShGame:
                 return
             while len(self.Answers) != 0:
                 self.Answers[0].ChangeGroup(ref_group)
-            self._Question.Groups.remove(self)
-
+            try:
+                self._Question.Groups.remove(self)
+            except:
+                pass
         def GetScore(self, include_bonus):
             if len(self.Answers) == 0:
                 return 0
@@ -1056,7 +1058,7 @@ def bUp(event):
         fromGRP = myTreeview.item(tv.selection())['values']
         toGRP = moveto['values']
         if toGRP != "" and fromGRP != "":
-            if fromGRP[0] == toGRP[0] and len(fromGRP) == 3:
+            if fromGRP[0] == toGRP[0] and len(fromGRP) > 1:
                 for i, q in enumerate(sg.Questions):
                     if int(i) == int(fromANS[0]):
                         myq = q
@@ -1066,16 +1068,23 @@ def bUp(event):
                     if g.Text == toGRP[1]:
                         tog = g
                 found = 0
-                for g in myq.Groups:
-                    for asx in g.Answers:
-                        myans = asx
-                        if asx._Player.Name == fromANS[2] and found != 1:
-                            found = 1
-                            tog.Answers.append(asx)
-                            fog.Answers.remove(asx)
-                            if len(fog.Answers) == 0:
-                                myq.Groups.remove(fog)
-                            updateTreeview()
+                if len(fromGRP) ==3:
+                    for g in myq.Groups:
+                        for asx in g.Answers:
+                            myans = asx
+                            if asx._Player.Name == fromANS[2] and found != 1:
+                                found = 1
+                                tog.Answers.append(asx)
+                                fog.Answers.remove(asx)
+                                if len(fog.Answers) == 0:
+                                    myq.Groups.remove(fog)
+                                updateTreeview()
+                elif len(fromGRP)==2:
+                    fog.MergeToGroup(tog)
+                    updateTreeview()
+
+
+
 
 
 def displayTreeview():
