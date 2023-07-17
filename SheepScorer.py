@@ -284,8 +284,10 @@ class ShGame:
 
         def __del__(self):
             for ans in self.Answers:
-                ans.Player.Answers.remove(ans)
-
+                try:
+                    ans.Player.Answers.remove(ans)
+                except:
+                    pass
     class ShAnswer:
         def __init__(self, ref_group, ref_player, new_text):
             self.Text = new_text
