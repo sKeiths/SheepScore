@@ -258,10 +258,7 @@ class ShGame:
                 return
             while len(self.Answers) != 0:
                 self.Answers[0].ChangeGroup(ref_group)
-            try:
-                self._Question.Groups.remove(self)
-            except:
-                pass
+
         def GetScore(self, include_bonus):
             if len(self.Answers) == 0:
                 return 0
@@ -398,7 +395,7 @@ class ShGame:
                     ans.ChangeGroup(grp)
                     return
 
-    def get_correct_text(self, method, correct):
+    def get_correct_text(method, correct):
         if method == sg.ShMethod.Sheep or method == sg.ShMethod.Heep or method == sg.ShMethod.Heep15 or method == sg.ShMethod.Heep2 or method == sg.ShMethod.Manual:
             return "Valid" if correct else "Invalid"
         else:
@@ -1133,26 +1130,6 @@ def updateTreeview():
 
         # myTreeview.insert('','end',text="this is text",iid=0)
 
-
-def do_popup(event):
-    tv = event.widget
-    item = tv.identify_row(event.y)
-    if tv.identify_row(event.y) not in tv.selection():
-        tv.selection_set(tv.identify_row(event.y))
-    if item == "":
-        return
-    elif myTreeview.item(item)["tags"][0] == "group":
-        try:
-            tv.popup.tk_popup(event.x_root, event.y_root, 0)
-        finally:
-            tv.popup.grab_release()
-    elif myTreeview.item(item)["tags"][0] == "answer":
-        try:
-            tv.popup2.tk_popup(event.x_root, event.y_root, 0)
-        finally:
-            tv.popup2.grab_release()
-
-
 def SetGroupName():
     top = Toplevel()
     top.grab_set()
@@ -1552,15 +1529,79 @@ def copyAllScoresUpToThisQuestionMenuItem_Click():
     copy_to_clipboard(txt)
 
 
+# right click menu - mark group as (in)correct/(in)valid
+def RCM_group_correct_Click():
+    values = myTreeview.item(myTreeview.selection())['values']
+    for g in sg.Questions[values[0]].Groups:
+        if g.Text == values[1]:
+            grp = g
+    if grp.Correct:
+        grp.Correct = False
+    else:
+        grp.Correct = True
+    updateTreeview()
+
+    # if clicked_node is None:
+    #     return
+    # grp = clicked_node.Tag
+    # if grp is None:
+    #     return
+    #
+    # if grp.Correct:
+    #     grp.Correct = False
+    # else:
+    #     grp.Correct = True
+    #
+    # sheep_modified = True
+    # updateTreeview()
+
 def debug():
     print("sg " + str(sg))
     print("Game type: " + str(sg.Method) + " Rounding: " + str(sg.Rounding))
     print("GetAllAnswers for Q[0]:", sg.Questions[0].GetAllAnswers())
-    print("Question[0].Scores:", sg.Questions[0].Scores(False))
+    print("Question[0].Scores:", sg.Questions[0].scores(False))
     scores = []
     for x, group in enumerate(sg.Questions[0].Groups):
         scores.append(f"Group {x} scores {group.GetScore(False)} ")
     print("q0g0.GetScore", scores)
+
+
+
+
+def do_popup(event):
+    tv = event.widget
+    item = tv.identify_row(event.y)
+
+    if tv.identify_row(event.y) not in tv.selection():
+        tv.selection_set(tv.identify_row(event.y))
+    if item == "":
+        return
+    elif myTreeview.item(item)["tags"][0] == "group":
+            values = myTreeview.item(item)["values"]
+            for g in sg.Questions[values[0]].Groups:
+                if g.Text == values[1]:
+                    mark=g.Correct
+                    break
+            if mark:
+                try:
+                    tv.popup.tk_popup(event.x_root, event.y_root, 0)
+                finally:
+                    tv.popup.grab_release()
+            else:
+                try:
+                    tv.popup3.tk_popup(event.x_root, event.y_root, 0)
+                finally:
+                    tv.popup3.grab_release()
+
+
+    elif myTreeview.item(item)["tags"][0] == "answer":
+        try:
+            tv.popup2.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            tv.popup2.grab_release()
+
+
+
 
 
 gt = {'Sheep': 1, 'PeehsDM': 2, 'PeehsFB': 3, 'PeehsHybrid': 4, 'Heep': 5, 'Heep15': 6, 'Heep2': 7, 'Kangaroo': 8,
@@ -1578,6 +1619,7 @@ players = []
 score = []
 curQ = 1
 curP = 1
+correctness = True
 
 window = Tk()
 
@@ -1667,12 +1709,16 @@ myTreeview.configure(yscrollcommand=vsb.set)
 vsb.grid(column=6, sticky='ns')
 myTreeview.popup = Menu(window, tearoff=0)
 myTreeview.popup.add_command(label="Set Group Name...", command=SetGroupName)  # , command=next) etc...
-myTreeview.popup.add_command(label="Mark invalid")
+myTreeview.popup.add_command(label="Mark invalid" ,command=RCM_group_correct_Click)
 myTreeview.popup.add_command(label="Group Score")  # , command=lambda: self.closeWindow())
 myTreeview.popup2 = Menu(window, tearoff=0)
 myTreeview.popup2.add_command(label="Use as Group Name", command=UseAsGroupName)  # , command=next) etc...
 myTreeview.popup2.add_command(label="Move to new group", command=MoveToNewGroup)
 myTreeview.popup2.add_command(label="Player Score...")  # , command=lambda: self.closeWindow()
+myTreeview.popup3 = Menu(window, tearoff=0)
+myTreeview.popup3.add_command(label="Set Group Name...", command=SetGroupName)  # , command=next) etc...
+myTreeview.popup3.add_command(label="Mark valid" ,command=RCM_group_correct_Click)
+myTreeview.popup3.add_command(label="Group Score")  # , command=lambda: self.closeWindow())
 myTreeview.bind("<Button-3>", do_popup)
 myTreeview.bind("<ButtonPress-1>", bDown)
 myTreeview.bind("<ButtonRelease-1>", bUp, add='+')
