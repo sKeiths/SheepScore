@@ -489,7 +489,7 @@ class ShGame:
         scoring_method = ET.SubElement(sheep_score_game, "ScoringMethod")
         scoring_method.text = str(self.Method.name)
         rounding = ET.SubElement(sheep_score_game, "Rounding")
-        rounding.text = str(self.Rounding.name)
+        rounding.text = str(self.Rounding.name) if str(self.Rounding.name) != "NONE" else "None"
         for que in self.Questions:
             question = ET.SubElement(sheep_score_game, "Question")
             question.set("GameIndex", str(que.game_index))
@@ -504,14 +504,14 @@ class ShGame:
                 group = ET.SubElement(sheep_score_game, "Group")
                 group.set("QuestionIndex", str(que.game_index))
                 group.set("GroupBonus", str(grp.GroupBonus))
-                group.set("BonusType", str(grp.BonusType))
+                group.set("BonusType",str(grp.BonusType.name)if str(grp.BonusType.name) != "NONE" else "None")
                 group.set("Correct", str(grp.Correct))
                 group2 = ET.SubElement(group, "Text")
                 group2.text = grp.Text
                 for ans in grp.Answers:
                     answer = ET.SubElement(group, "Answer")
                     answer.set("AnswerBonus", str(ans.AnswerBonus))
-                    answer.set("BonusType", str(ans.BonusType))
+                    answer.set("BonusType", str(ans.BonusType.name)if str(ans.BonusType.name) != "NONE" else "None")
                     answer.set("PlayerIndex", str(ans.Player.game_index))
                     answer.text = ans.Text
         tree = ET.ElementTree(sheep_score_game)
