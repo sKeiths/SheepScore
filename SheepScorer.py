@@ -931,6 +931,8 @@ def validate_entry2(inp):
     return True
 
 
+
+
 def edAnswers(window):
     global players, curP, current_var
 
@@ -1130,30 +1132,6 @@ def updateTreeview():
 
         # myTreeview.insert('','end',text="this is text",iid=0)
 
-def SetGroupName():
-    top = Toplevel()
-    top.grab_set()
-    top.bind('<Return>', lambda x: set_newgroupname(top, entry.get()))
-    label = Label(top, text="What is the new name for the group?")
-    entry = Entry(top, textvariable=input)
-    buttonok = Button(top, text="OK", command=lambda: set_newgroupname(top, entry.get()))
-    buttoncancel = Button(top, text="Cancel", command=lambda: edCancel(top))
-    label.pack()
-    entry.pack()
-    buttonok.pack()
-    buttoncancel.pack()
-    entry.focus_force()
-
-
-def set_newgroupname(top, input):
-    top.destroy()
-    values = myTreeview.item(myTreeview.selection())['values']
-    q = values[0]
-    question = sg.Questions[q]
-    groupnames = [grp.Text for grp in question.Groups]
-    if input not in groupnames and input != "":
-        sg.Questions[q].Groups[groupnames.index(str(values[1]))].Text = input
-    updateTreeview()
 
 
 def UseAsGroupName():
@@ -1261,10 +1239,10 @@ def TextForGroupNode(grp):
 def TextForAnswerNode(ans):
     bonus_text = ""
     if ans.BonusType == ShGame.ShBonusType.Override:
-        bonus_text = " (=" + ans.AnswerBonus + ")"
+        bonus_text = " (=" + str(ans.AnswerBonus) + ")"
     elif ans.BonusType == ShGame.ShBonusType.Add:
         if ans.AnswerBonus != 0:
-            bonus_text = " (" + ("+" if ans.AnswerBonus > 0 else "") + ans.AnswerBonus + ")"
+            bonus_text = " (" + ("+" if ans.AnswerBonus > 0 else "") + str(ans.AnswerBonus) + ")"
 
     return ans.Text + " - " + ans.Player.Name + bonus_text
 
@@ -1509,7 +1487,7 @@ def copyAllScoresUpToThisQuestionMenuItem_Click():
     txt = "[b]Scores after question " + str(
         cur_q_index + 1) + ":[/b]" + "\n" + "\n" + "[table=30][tr][th]Player[/th][th]Total[/th]"
 
-    any_starting_scores = any(p.StartScore != 0 for p in sg.Players)
+    any_starting_scores = any(int(p.StartScore) != 0 for p in sg.Players)
 
     if any_starting_scores:
         txt += "[th]Start[/th]"
@@ -1521,8 +1499,8 @@ def copyAllScoresUpToThisQuestionMenuItem_Click():
     for plr_scores in sorted(curScores.items(), key=lambda ps: (str(float(ps[0].StartScore) + sum(ps[1]))) * order_mult):
         plr = plr_scores[0]
         scrs = plr_scores[1]
-        start_score_string = "\t" + str(plr.StartScore) if any_starting_scores else ""
-        txt += "\n" + "[tr][td]" + plr.Name + "[/td][td][b]" + str(int(plr.StartScore) + sum(scrs)) + "[/b][/td][td]" + start_score_string + "[/td]"+"".join(("[td]"+str(s)+"[/td]") for s in scrs) + "[/tr]"
+        start_score_string = "[td]" + str(plr.StartScore) + "[/td]" if any_starting_scores else ""
+        txt += "\n" + "[tr][td]" + plr.Name + "[/td][td][b]" + ("%.4g" % (float(plr.StartScore) + sum(scrs))) + "[/b][/td]" + start_score_string +"".join(("[td]"+str(s)+"[/td]") for s in scrs) + "[/tr]"
 
     txt += "[/table]" + "\n"
 
@@ -1600,7 +1578,83 @@ def do_popup(event):
         finally:
             tv.popup2.grab_release()
 
+def SetGroupName():
+    top = Toplevel()
+    top.geometry("240x125")
+    top.title("Group Name")
+    top.grab_set()
+    top.bind('<Return>', lambda x: set_newgroupname(top, entry.get()))
+    label = Label(top, text="What is the new name for the group?")
+    entry = Entry(top, textvariable=input)
+    buttonok = Button(top, text="OK", command=lambda: set_newgroupname(top, entry.get()))
+    buttoncancel = Button(top, text="Cancel", command=lambda: edCancel(top))
+    label.pack(pady=10)
+    entry.pack(padx=10,pady=10)
+    buttoncancel.pack(side="right",padx=10,pady=10)
+    buttonok.pack(side="right",padx=10,pady=10)
 
+    entry.focus_force()
+
+def SetGroupScore():
+    ss.set(1)
+    top = Toplevel()
+    top.geometry("300x140")
+    frame1=Frame(top)
+    frame2=Frame(top)
+    frame1.pack(fill="x")
+    frame2.pack(fill="x")
+    top.title("Edit Group Score")
+    top.grab_set()
+    top.bind('<Return>', lambda x: set_newgroupscore(top, d.get()))
+    a=Radiobutton(frame1, text="Bonus/Penalty (add or subtract)", variable=ss, value=1)
+    b=Radiobutton(frame1, text="Override (set score equal to)", variable=ss, value=2)
+    c=Label(frame1,text="Score:")
+    d=Entry(frame1,textvariable=input,justify="right", validate="key", validatecommand=(window.register(validate_entry3), "%P" ) )
+    buttonok = Button(frame2, text="OK", padx=10,command=lambda: set_newgroupscore(top, d.get()))
+    buttoncancel = Button(frame2, text="Cancel", command=lambda: edCancel(top))
+    a.pack(anchor="w",padx=10)
+    b.pack(anchor="w",padx=10)
+    c.pack(side="left",padx=10,pady=10)
+    d.pack(side="right",padx=10,pady=10)
+    buttoncancel.pack(side="right",padx=10,pady=10)
+    buttonok.pack(side="right",padx=10,pady=10)
+    d.focus_force()
+
+def set_newgroupscore(top, input):
+    top.destroy()
+    values = myTreeview.item(myTreeview.selection())['values']
+    q = int(values[0])
+    question = sg.Questions[q]
+    groupnames = [grp.Text for grp in question.Groups]
+    if input != "" and input != 0 and len(values)==2:
+
+        sg.Questions[q].Groups[groupnames.index(str(values[1]))].GroupBonus = float(input)
+        sg.Questions[q].Groups[groupnames.index(str(values[1]))].BonusType = sg.ShBonusType.Add if ss.get() == 1 else sg.ShBonusType.Override
+    elif len(values)==3:
+        for answer in sg.Questions[q].Groups[groupnames.index(str(values[1]))].Answers:
+            if answer.Player.Name == values[2]:
+                answer.AnswerBonus = float(input)
+                answer.BonusType = sg.ShBonusType.Add if ss.get() == 1 else sg.ShBonusType.Override
+    updateTreeview()
+
+def set_newgroupname(top, input):
+    top.destroy()
+    values = myTreeview.item(myTreeview.selection())['values']
+    q = int(values[0])
+    question = sg.Questions[q]
+    groupnames = [grp.Text for grp in question.Groups]
+    if input not in groupnames and input != "":
+        sg.Questions[q].Groups[groupnames.index(str(values[1]))].Text = input
+    updateTreeview()
+
+def validate_entry3(inp):
+    if inp == "-": return True
+    if inp == "": return True
+    try:
+        float(inp)
+    except:
+        return False
+    return True
 
 
 
@@ -1710,15 +1764,15 @@ vsb.grid(column=6, sticky='ns')
 myTreeview.popup = Menu(window, tearoff=0)
 myTreeview.popup.add_command(label="Set Group Name...", command=SetGroupName)  # , command=next) etc...
 myTreeview.popup.add_command(label="Mark invalid" ,command=RCM_group_correct_Click)
-myTreeview.popup.add_command(label="Group Score")  # , command=lambda: self.closeWindow())
+myTreeview.popup.add_command(label="Group Score", command=SetGroupScore)  # , command=lambda: self.closeWindow())
 myTreeview.popup2 = Menu(window, tearoff=0)
 myTreeview.popup2.add_command(label="Use as Group Name", command=UseAsGroupName)  # , command=next) etc...
 myTreeview.popup2.add_command(label="Move to new group", command=MoveToNewGroup)
-myTreeview.popup2.add_command(label="Player Score...")  # , command=lambda: self.closeWindow()
+myTreeview.popup2.add_command(label="Player Score...", command=SetGroupScore)  # , command=lambda: self.closeWindow()
 myTreeview.popup3 = Menu(window, tearoff=0)
 myTreeview.popup3.add_command(label="Set Group Name...", command=SetGroupName)  # , command=next) etc...
 myTreeview.popup3.add_command(label="Mark valid" ,command=RCM_group_correct_Click)
-myTreeview.popup3.add_command(label="Group Score")  # , command=lambda: self.closeWindow())
+myTreeview.popup3.add_command(label="Group Score", command=SetGroupScore)  # , command=lambda: self.closeWindow())
 myTreeview.bind("<Button-3>", do_popup)
 myTreeview.bind("<ButtonPress-1>", bDown)
 myTreeview.bind("<ButtonRelease-1>", bUp, add='+')
