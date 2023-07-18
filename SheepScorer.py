@@ -6,10 +6,8 @@ import re
 import sys
 import math
 
-
 def quit():
     sys.exit()
-
 
 class EdPlayer:
 
@@ -56,7 +54,6 @@ class EdPlayer:
             self.StartScore = start_score
             self.NeedsRegroupIng = FALSE
             self.OriginalPosition = orig_pos
-
 
 class ShGame:
     class ShQuestion:
@@ -199,7 +196,6 @@ class ShGame:
 
             return cur_score
 
-    # Generate post for score totals up to and including this question
 
     class ShPlayer:
         counter = 0
