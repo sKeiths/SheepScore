@@ -285,7 +285,7 @@ class ShGame:
         def __init__(self, ref_group, ref_player, new_text):
             self.Text = new_text
             self.AnswerBonus = 0
-            self.BonusType = None
+            self.BonusType = sg.ShBonusType.NONE
             self._Group = ref_group
             self._Player = ref_player
 
@@ -912,7 +912,10 @@ def TextBoxUpdate(edATB, edAText, combo):
             PAnswers = []
             answers = ""
             for x in players[curP].Answers: PAnswers.append(x)
-            for item in PAnswers: answers = answers + str(item) + "\n"
+            if PAnswers[-1].lstrip() == '':
+                del PAnswers[-1]
+            for item in PAnswers: answers = answers + str(item).strip() + "\n"
+
             edAText.delete(1.0, END)
             edAText.insert(INSERT, answers)
             edAText.grid(column=0, columnspan=3, rowspan=10, padx=5, pady=5)
